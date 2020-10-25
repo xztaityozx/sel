@@ -99,7 +99,11 @@ func do(opt option.Option, queries []string) error {
 		// from stdin
 		scan := bufio.NewScanner(os.Stdin)
 		for scan.Scan() {
-			fmt.Println(selector(scan.Text()))
+			line, err := selector(scan.Text())
+			if err != nil {
+				return err
+			}
+			fmt.Println(line)
 		}
 		_ = os.Stdout.Close()
 		_ = os.Stdin.Close()
