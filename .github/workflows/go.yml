@@ -43,3 +43,49 @@ jobs:
       - name: Test
         run: |
           go test -v ./...
+  
+  build:
+    name: Build release binary
+    if: contains(github.reg, 'tags/v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    
+    steps:
+      - uses: actions/checkout@v2.3.3
+      - name: before cache
+        run: |
+          mkdir -p ~/go/pkg/mod
+      - uses: actions/cache@v2.1.2
+        id: cache-go
+        with:
+          key: ${{ matrix.os }}-go-${{ hashFiles('**/go.sum') }}
+          path: ~/go/pkg/mod
+          restore-keys: |
+            go-${{ matrix.os }}-
+      - name: Setup GoLang
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: ^1.15
+      - name: Get Dependencies
+        if: steps.cache-go.outputs.cache-hit != 'true'
+        run: go get -v -t -d ./...
+
+      - name: vars
+        shell: bash
+        run: |
+          echo ::set-output name=os::"$(echo ${{ matrix.os }} | sed 's/-latest//g;s/ubuntu/linux/g')"
+          echo ::set-output name=version::${{TAG_REF_NAME##*/v}}
+        env:
+          TAG_REF_NAME: ${{ github.ref }}
+
+      - name: Build
+        run: |
+          go build -v -o ./sel-${{ steps.vars.outputs.os }}-${{ steps.vars.outputs.version }}
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: sel
+          path: ./sel
