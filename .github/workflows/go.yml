@@ -1,0 +1,34 @@
+name: Go
+
+on: ["push"]
+jobs:
+  test:
+    name: "Unit test"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+        
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          key: ${{ matrix.os }}-go-${{ hashFiles('**/go.sum') }}
+          path: ~/go/pkg/mod
+          restore-keys: |
+            go-${{ matrix.os }}-
+      - name: Setup GoLang
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: ^1.15
+      - name: Download Go Modules
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: go mod download
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v1.2.1
+        with:
+          version: 1.29
+      - name: Test
+        run: |
+          go test -v ./...
