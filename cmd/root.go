@@ -3,14 +3,15 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
-	"xztaityozx/sel/option"
-	"xztaityozx/sel/paser"
-	"xztaityozx/sel/rw"
+	"github.com/xztaityozx/sel/option"
+	"github.com/xztaityozx/sel/paser"
+	"github.com/xztaityozx/sel/rw"
 )
 
 var rootCmd = &cobra.Command{
@@ -26,6 +27,7 @@ var rootCmd = &cobra.Command{
 __sel__ect column`,
 	Example: "sel 1",
 	Args:    cobra.MinimumNArgs(1),
+	Version: "0.0.1",
 	Run: func(cmd *cobra.Command, queries []string) {
 		opt := option.Option{
 			InPlace: viper.GetBool("in-place"),
