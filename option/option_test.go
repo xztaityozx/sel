@@ -2,13 +2,14 @@ package option_test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
-	"xztaityozx/sel/option"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/option"
 )
 
 func TestInputFiles_Enumerate(t *testing.T) {
