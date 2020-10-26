@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           echo ::set-output name=os::"$(echo ${{ matrix.os }} | sed 's/-latest//g;s/ubuntu/linux/g')"
-          echo ::set-output name=version::${{TAG_REF_NAME##*/v}}
+          echo ::set-output name=version::${TAG_REF_NAME##*/v}
         env:
           TAG_REF_NAME: ${{ github.ref }}
 
