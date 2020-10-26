@@ -1,13 +1,14 @@
 package rw_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"xztaityozx/sel/rw"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/rw"
 )
 
 func TestReadWrite(t *testing.T) {
