@@ -3,7 +3,7 @@ name: Go
 on: ["push"]
 jobs:
   linter:
-    name: ""
+    name: "golang-linter"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.3
@@ -22,8 +22,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2.3.3
+      - name: before cache
+        run: |
+          mkdir -p ~/go/pkg/mod
       - uses: actions/cache@v2.1.2
         with:
+          id: cache-go
           key: ${{ matrix.os }}-go-${{ hashFiles('**/go.sum') }}
           path: ~/go/pkg/mod
           restore-keys: |
@@ -32,9 +36,9 @@ jobs:
         uses: actions/setup-go@v2.1.3
         with:
           go-version: ^1.15
-      - name: Download Go Modules
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: go mod download
+      - name: Get Dependencies
+        if: steps.cache-go.outputs.cache-hit != 'true'
+        run: go get -v -t -d ./...
 
       - name: Test
         run: |
