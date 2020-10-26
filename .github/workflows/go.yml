@@ -2,14 +2,24 @@ name: Go
 
 on: ["push"]
 jobs:
+  linter:
+    name: ""
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.3.3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.29
+    
   test:
-    name: "Unit test"
+    name: Unit Test
+    needs: [linter]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        
-        
+
     steps:
       - uses: actions/checkout@v2.3.3
       - uses: actions/cache@v2.1.2
