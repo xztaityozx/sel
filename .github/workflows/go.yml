@@ -26,8 +26,8 @@ jobs:
         run: |
           mkdir -p ~/go/pkg/mod
       - uses: actions/cache@v2.1.2
+        id: cache-go
         with:
-          id: cache-go
           key: ${{ matrix.os }}-go-${{ hashFiles('**/go.sum') }}
           path: ~/go/pkg/mod
           restore-keys: |
