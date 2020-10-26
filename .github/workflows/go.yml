@@ -47,6 +47,7 @@ jobs:
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
+    needs: [linter, test]
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
@@ -72,6 +73,7 @@ jobs:
         run: go get -v -t -d ./...
 
       - name: vars
+        id: vars
         shell: bash
         run: |
           echo ::set-output name=os::"$(echo ${{ matrix.os }} | sed 's/-latest//g;s/ubuntu/linux/g')"
@@ -87,4 +89,4 @@ jobs:
         uses: actions/upload-artifact@v2.2.0
         with:
           name: sel
-          path: ./sel
+          path: ./sel-${{ steps.vars.outputs.os }}-${{ steps.vars.outputs.version }}
