@@ -83,7 +83,7 @@ jobs:
 
       - name: Build
         run: |
-          go build -v
+          go build -v -o ${{ steps.vars.outputs.os }}
           
       - name: Upload artifact
         uses: actions/upload-artifact@v2.2.0
@@ -100,10 +100,12 @@ jobs:
         run: |
           echo ::set-output name=version::${TAG_REF_NAME##*/v}
         env:
-          TAG_REF_NAME: "tags/v1.0.0"
+          TAG_REF_NAME: "tags/v0.0.1"
       
       - name: Create Release
         uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.vars.outputs.version }}
           release_name: Release ${{ steps.vars.outputs.version }}
