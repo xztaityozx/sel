@@ -83,10 +83,38 @@ jobs:
 
       - name: Build
         run: |
-          go build -v -o ./sel-${{ steps.vars.outputs.os }}-${{ steps.vars.outputs.version }}
+          go build -v
           
       - name: Upload artifact
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: sel
-          path: ./sel-${{ steps.vars.outputs.os }}-${{ steps.vars.outputs.version }}
+          name: ${{ steps.vars.outputs.os }}
+          path: ./sel
+  
+  create-release:
+    needs: [linter, test, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: vars
+        id: vars
+        run: |
+          echo ::set-output name=version::${TAG_REF_NAME##*/v}
+        env:
+          TAG_REF_NAME: "tags/v1.0.0"
+      
+      - name: Create Release
+        uses: actions/create-release@v1.1.4
+        with:
+          tag_name: ${{ steps.vars.outputs.version }}
+          release_name: Release ${{ steps.vars.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Output release url
+        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+        
+      - name: Save Release URL File for publish
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: release_url
+          path: release_url.txt
