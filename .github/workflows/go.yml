@@ -89,7 +89,7 @@ jobs:
         uses: actions/upload-artifact@v2.2.0
         with:
           name: ${{ steps.vars.outputs.os }}
-          path: ./sel
+          path: ./${{ steps.vars.outputs.os }}
   
   create-release:
     needs: [linter, test, build]
