@@ -28,6 +28,16 @@ __sel__ect column`,
 	Example: "sel 1",
 	Args:    cobra.MinimumNArgs(1),
 	Version: "0.0.1",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if shell := viper.GetString("completion"); len(shell) != 0 {
+			err := Completion{W: os.Stdout}.Gen(cmd, shell)
+			if err != nil {
+				fatal(err)
+			}
+
+			os.Exit(0)
+		}
+	},
 	Run: func(cmd *cobra.Command, queries []string) {
 		opt := option.Option{
 			InPlace: viper.GetBool("in-place"),
@@ -56,11 +66,15 @@ func init() {
 	rootCmd.Flags().StringSliceP("input-files", "f", nil, "input files")
 	rootCmd.Flags().StringP("input-delimiter", "d", " ", "sets field delimiter(input)")
 	rootCmd.Flags().StringP("output-delimiter", "D", " ", "sets field delimiter(output)")
+	rootCmd.Flags().String("completion", "", "generate completion")
+	rootCmd.Flags().MarkHidden("completion")
+	rootCmd.MarkFlagFilename("input-files")
 
 	for _, key := range []string{
 		"in-place", "backup",
 		"input-files",
 		"input-delimiter", "output-delimiter",
+		"completion",
 	} {
 		_ = viper.BindPFlag(key, rootCmd.Flags().Lookup(key))
 	}
