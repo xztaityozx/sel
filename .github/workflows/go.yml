@@ -89,11 +89,14 @@ jobs:
           go build -v -o ${{ steps.vars.outputs.os }}/sel
     
       - name: Create completion script
+        shell: bash
         working-directory: ${{ steps.vars.outputs.os }}
         run: |
-          ./sel --completion zsh - > ./sel-completion.zsh
-          ./sel --completion bash - > ./sel-completion.bash
-          ./sel --completion fish - > ./sel-completion.fish
+          [[ "${{ matrix.os }}" != "windows-latest" ]] && {
+            ./sel --completion zsh - > ./sel-completion.zsh
+            ./sel --completion bash - > ./sel-completion.bash
+            ./sel --completion fish - > ./sel-completion.fish
+          }
           ./sel --completion PowerShell - > ./sel-completion.ps1
           
       - name: Upload artifact
@@ -104,7 +107,7 @@ jobs:
   
   create-release:
     needs: [linter, test, build]
-    #if: contains(github.ref, 'tags/v')
+    if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: vars
@@ -112,8 +115,7 @@ jobs:
         run: |
           echo ::set-output name=version::${TAG_REF_NAME##*/v}
         env:
-          #TAG_REF_NAME: ${{ github.ref }}
-          TAG_REF_NAME: "v0.0.1"
+          TAG_REF_NAME: ${{ github.ref }}
 
       - name: Create Release
         uses: actions/create-release@v1.1.4
