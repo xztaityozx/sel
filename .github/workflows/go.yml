@@ -120,6 +120,7 @@ jobs:
 
       - name: Create Release
         uses: actions/create-release@v1.1.4
+        id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -179,5 +180,5 @@ jobs:
         with: 
           upload_url: ${{ steps.get_release_info.outputs.upload_url }}
           asset_path: ./${{ matrix.os }}.zip
-          asset_name: ${{ steps.get_release_info.outputs.file_name }}-${{ matrix.runtime_id }}.zip
+          asset_name: ${{ steps.get_release_info.outputs.file_name }}-${{ matrix.os }}.zip
           asset_content_type: application/zip     
