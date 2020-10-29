@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xztaityozx/sel/option"
-	"github.com/xztaityozx/sel/paser"
+	"github.com/xztaityozx/sel/parser"
 	"github.com/xztaityozx/sel/rw"
 )
 
@@ -97,7 +97,7 @@ func Execute() {
 
 func do(opt option.Option, queries []string) error {
 
-	pr, err := paser.New(queries...).Parse()
+	pr, err := parser.New(queries...).Parse()
 	if err != nil {
 		return err
 	}
