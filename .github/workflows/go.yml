@@ -139,7 +139,7 @@ jobs:
 
   upload-release:
     runs-on: ubuntu-latest
-    if: contains(github.ref, 'tags/v)
+    if: contains(github.ref, 'tags/v')
     needs: [linter, create-release, test, build]
     strategy:
       matrix:
