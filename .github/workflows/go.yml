@@ -48,7 +48,7 @@ jobs:
     name: Build release binary
     runs-on: ${{ matrix.os }}
     needs: [linter, test]
-    if: contains(github.ref, "tags/v")
+    if: contains(github.ref, 'tags/v')
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
@@ -94,7 +94,7 @@ jobs:
   
   create-release:
     needs: [linter, test, build]
-    if: contains(github.ref, "tags/v")
+    if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: vars
