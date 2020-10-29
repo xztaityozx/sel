@@ -14,35 +14,35 @@ func TestCompletion_Gen(t *testing.T) {
 		"zsh": func() []byte {
 			var data []byte
 			buf := bytes.NewBuffer(data)
-			rootCmd.GenZshCompletion(buf)
+			_ = rootCmd.GenZshCompletion(buf)
 
 			return data
 		},
 		"bash": func() []byte {
 			var data []byte
 			buf := bytes.NewBuffer(data)
-			rootCmd.GenBashCompletion(buf)
+			_ = rootCmd.GenBashCompletion(buf)
 
 			return data
 		},
 		"fish": func() []byte {
 			var data []byte
 			buf := bytes.NewBuffer(data)
-			rootCmd.GenFishCompletion(buf, true)
+			_ = rootCmd.GenFishCompletion(buf, true)
 
 			return data
 		},
 		"pwsh": func() []byte {
 			var data []byte
 			buf := bytes.NewBuffer(data)
-			rootCmd.GenPowerShellCompletion(buf)
+			_ = rootCmd.GenPowerShellCompletion(buf)
 
 			return data
 		},
 		"PowerShell": func() []byte {
 			var data []byte
 			buf := bytes.NewBuffer(data)
-			rootCmd.GenPowerShellCompletion(buf)
+			_ = rootCmd.GenPowerShellCompletion(buf)
 
 			return data
 		},
