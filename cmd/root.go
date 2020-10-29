@@ -67,8 +67,8 @@ func init() {
 	rootCmd.Flags().StringP("input-delimiter", "d", " ", "sets field delimiter(input)")
 	rootCmd.Flags().StringP("output-delimiter", "D", " ", "sets field delimiter(output)")
 	rootCmd.Flags().String("completion", "", "generate completion")
-	rootCmd.Flags().MarkHidden("completion")
-	rootCmd.MarkFlagFilename("input-files")
+	_ = rootCmd.Flags().MarkHidden("completion")
+	_ = rootCmd.MarkFlagFilename("input-files")
 
 	for _, key := range []string{
 		"in-place", "backup",
