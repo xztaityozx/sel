@@ -48,7 +48,7 @@ jobs:
     name: Build release binary
     runs-on: ${{ matrix.os }}
     needs: [linter, test]
-    #if: contains(github.ref, 'tags/v')
+    if: contains(github.ref, 'tags/v')
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
@@ -80,8 +80,8 @@ jobs:
           echo ::set-output name=os::"$(echo ${{ matrix.os }} | sed 's/-latest//g;s/ubuntu/linux/g')"
           echo ::set-output name=version::${TAG_REF_NAME##*/v}
         env:
-          #TAG_REF_NAME: ${{ github.ref }}
-          TAG_REF_NAME: "v0.0.1"
+          TAG_REF_NAME: ${{ github.ref }}
+
 
       - name: Build
         run: |
@@ -107,7 +107,7 @@ jobs:
   
   create-release:
     needs: [linter, test, build]
-    #if: contains(github.ref, 'tags/v')
+    if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: vars
@@ -115,8 +115,7 @@ jobs:
         run: |
           echo ::set-output name=version::${TAG_REF_NAME##*/v}
         env:
-          #TAG_REF_NAME: ${{ github.ref }}
-          TAG_REF_NAME: "v0.0.1"
+          TAG_REF_NAME: ${{ github.ref }}
 
       - name: Create Release
         uses: actions/create-release@v1.1.4
@@ -140,7 +139,7 @@ jobs:
 
   upload-release:
     runs-on: ubuntu-latest
-    #if: contains(github.ref, 'tags/v)
+    if: contains(github.ref, 'tags/v)
     needs: [linter, create-release, test, build]
     strategy:
       matrix:
@@ -163,9 +162,8 @@ jobs:
           echo ::set-output name=upload_url::"$(cat release_url.txt)"
           echo ::set-output name=version::${TAG_REF_NAME##*/v}
         env:
-          #TAG_REF_NAME: ${{ github.ref }}
+          TAG_REF_NAME: ${{ github.ref }}
           REPOSITORY_NAME: ${{ github.repository }}
-          TAG_REF_NAME: "v0.0.1"
 
       - name: Create Zip
         shell: bash
