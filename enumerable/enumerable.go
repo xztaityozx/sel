@@ -2,13 +2,12 @@ package enumerable
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
 type Range struct {
-	start index
+	start int
 	stop  index
 	step  int
 }
@@ -26,167 +25,95 @@ func NewInfIndex() index {
 	return index{inf: true}
 }
 
-var dic = []struct {
-	re      *regexp.Regexp
-	builder func([]int) Range
-}{
-	{
-		re: regexp.MustCompile(`^\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewPositionIndex(s[0]),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^\d+:\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewPositionIndex(s[1]),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^\d+:\d+:\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewPositionIndex(s[1]),
-				step:  s[2],
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^\d+:$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewInfIndex(),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^:\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(1),
-				stop:  NewPositionIndex(s[1]),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^:$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(1),
-				stop:  NewInfIndex(),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^\d+:\d+:$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewPositionIndex(s[1]),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^\d+::$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewInfIndex(),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^::$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(1),
-				stop:  NewInfIndex(),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^:\d+:$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(1),
-				stop:  NewPositionIndex(s[1]),
-				step:  1,
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^:\d+:\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(1),
-				stop:  NewPositionIndex(s[1]),
-				step:  s[2],
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^::\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(1),
-				stop:  NewInfIndex(),
-				step:  s[2],
-			}
-		},
-	},
-	{
-		re: regexp.MustCompile(`^\d+::\d+$`),
-		builder: func(s []int) Range {
-			return Range{
-				start: NewPositionIndex(s[0]),
-				stop:  NewInfIndex(),
-				step:  s[2],
-			}
-		},
-	},
-}
-
 func NewRange(query string) (Range, error) {
-
-	var split []int
-	for _, v := range strings.Split(query, ":") {
-		if len(v) == 0 {
-			split = append(split, 0)
-			continue
-		}
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			return Range{}, err
-		}
-		split = append(split, i)
-	}
-
-	for _, v := range dic {
-		if v.re.MatchString(query) {
-			r := v.builder(split)
-			if r.step == 0 {
-				return Range{}, fmt.Errorf("step is zero")
+	var err error
+	split := strings.Split(query, ":")
+	if len(split) == 1 {
+		// \d+
+		idx, err := strconv.Atoi(split[0])
+		return Range{
+			start: idx,
+			stop:  NewPositionIndex(idx),
+			step:  1,
+		}, err
+	} else if len(split) == 2 || len(split) == 3 {
+		// \d*:\d*:\d*
+		start := 1
+		if len(split[0]) != 0 {
+			idx, err := strconv.Atoi(split[0])
+			if err != nil {
+				return Range{}, err
 			}
-
-			return r, nil
+			start = idx
 		}
+
+		stop := NewInfIndex()
+		if len(split[1]) != 0 {
+			idx, err := strconv.Atoi(split[1])
+			if err != nil {
+				return Range{}, err
+			}
+			stop = NewPositionIndex(idx)
+		}
+
+		step := 1
+		if len(split) == 3 && len(split[2]) != 0 {
+			step, err = strconv.Atoi(split[2])
+			if err != nil {
+				return Range{}, err
+			}
+		}
+
+		if step == 0 {
+			return Range{}, fmt.Errorf("step cannot be zero")
+		}
+
+		return Range{start: start, stop: stop, step: step}, nil
 	}
 
 	return Range{}, fmt.Errorf("failed to parse query: %s", query)
+}
+
+func (r Range) Enumerate(max int) <-chan int {
+	rt := make(chan int)
+
+	go func() {
+		defer close(rt)
+
+		start := r.start
+		if start < 0 {
+			start = max + start
+		}
+
+		stop := r.stop.num
+		if r.stop.inf || stop >= max {
+			stop = max
+		}
+		if stop < 0 {
+			stop = max + stop + 1
+		}
+
+		step := r.step
+
+		if start == stop {
+			rt <- start
+		} else if start < stop {
+			if step < 0 {
+				return
+			}
+			for idx := start; idx <= stop; idx += step {
+				rt <- idx
+			}
+		} else {
+			if step > 0 {
+				return
+			}
+			for idx := start; idx >= stop; idx += step {
+				rt <- idx
+			}
+		}
+
+	}()
+
+	return rt
 }
