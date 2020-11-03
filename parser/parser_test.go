@@ -8,88 +8,178 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	as := assert.New(t)
-
-	t.Run("引数が0でもいい", func(t *testing.T) {
-		expect := Parser{query: nil}
-		actual := New()
-
-		as.Equal(expect, actual)
-	})
-
-	t.Run("引数が1でもいい", func(t *testing.T) {
-		expect := Parser{query: []string{"1"}}
-		actual := New("1")
-
-		as.Equal(expect, actual)
-	})
-
-	t.Run("引数が何個でもいい", func(t *testing.T) {
-		expect := Parser{query: []string{"1", "2", "3"}}
-		actual := New("1", "2", "3")
-
-		as.Equal(expect, actual)
-	})
+	assert.Equal(t, Parser{query: []string{"query"}}, New("query"))
 }
 
 func TestParser_Parse(t *testing.T) {
+	max := 10
 	as := assert.New(t)
 
-	data := []struct {
-		in     string
-		expect []int
-	}{
-		{in: "1", expect: []int{1}},
-		{in: "1 2 3", expect: []int{1, 2, 3}},
-		{in: "2 3 1", expect: []int{2, 3, 1}},
-		{in: "1:3", expect: []int{1, 2, 3}},
-		{in: "1 2:4", expect: []int{1, 2, 3, 4}},
-		{in: "1:2 3:4", expect: []int{1, 2, 3, 4}},
-		{in: "1:3 4", expect: []int{1, 2, 3, 4}},
-		{in: "4:1", expect: []int{4, 3, 2, 1}},
-		{in: "4:2 1", expect: []int{4, 3, 2, 1}},
-		{in: "1:1:4", expect: []int{1, 2, 3, 4}},
-		{in: "4:1:1", expect: []int{4, 3, 2, 1}},
-		{in: "4:1:1 1:1:4", expect: []int{4, 3, 2, 1, 1, 2, 3, 4}},
-		{in: "1:1:4 4:1:1", expect: []int{1, 2, 3, 4, 4, 3, 2, 1}},
-		{in: "1:2:10", expect: []int{1, 3, 5, 7, 9}},
-		{in: "1:3:10", expect: []int{1, 4, 7, 10}},
-		{in: "1:2:10 1", expect: []int{1, 3, 5, 7, 9, 1}},
-	}
+	t.Run("正常系", func(t *testing.T) {
+		data := map[string][]Range{
+			"1": {Range{start: 1, stop: newPositionIndex(1), step: 1}},
+			"1:10 :10 1: : ::": {
+				Range{start: 1, stop: newPositionIndex(max), step: 1},
+				Range{start: 1, stop: newPositionIndex(max), step: 1},
+				Range{start: 1, stop: newInfIndex(), step: 1},
+				Range{start: 1, stop: newInfIndex(), step: 1},
+				Range{start: 1, stop: newInfIndex(), step: 1},
+			},
+			"1:5:1 1:10:2": {
+				Range{start: 1, stop: newPositionIndex(5), step: 1},
+				Range{start: 1, stop: newPositionIndex(max), step: 2},
+			},
+		}
 
-	for _, v := range data {
-		split := strings.Split(v.in, " ")
-		pr, err := New(split...).Parse()
+		for q, expect := range data {
+			pr, err := New(strings.Split(q, " ")...).Parse()
+			as.Nil(err)
+			as.Equalf(expect, pr.Ranges, "%v", q)
+		}
+	})
 
-		as.Nil(err)
-		as.Equal(v.expect, pr.SelectedColumns, fmt.Sprintf("query: %v", v.in))
-	}
+	t.Run("異常系", func(t *testing.T) {
+		for _, q := range []string{
+			"1:10:0",
+			"invalid",
+			"invalid:1",
+			"1:invalid",
+			"1:1:invalid",
+		} {
+			_, err := New(q).Parse()
+			as.Error(err)
+		}
+	})
 }
 
 func TestParseResult_Select(t *testing.T) {
 	as := assert.New(t)
 
-	line := []string{"item1", "item2", "item3"}
+	line := func() []string {
+		var rt []string
+		for i := 0; i < 10; i++ {
+			rt = append(rt, fmt.Sprint(i+1))
+		}
+		return rt
+	}()
 
-	t.Run("indexに負数があると", func(t *testing.T) {
-		_, err := ParseResult{SelectedColumns: []int{1, 2, -1}}.Select(line)
-		as.Error(err, "例外が投げられる")
+	t.Run("正常系", func(t *testing.T) {
+		data := map[string][]int{
+			"1":                  {1},
+			"1 2 3":              {1, 2, 3},
+			"1:5":                {1, 2, 3, 4, 5},
+			":":                  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			"::":                 {1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			"1:4 4:1:-1":         {1, 2, 3, 4, 4, 3, 2, 1},
+			"0":                  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			"1 1":                {1, 1},
+			"-4: 0 :-4":          {7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7},
+			"1 5:1 5:1:1 5:1:-1": {1, 5, 4, 3, 2, 1},
+			"11":                 {},
+		}
+
+		for q, d := range data {
+			pr, err := New(strings.Split(q, " ")...).Parse()
+			as.Nil(err)
+			expect := func() []string {
+				var rt []string
+				for _, v := range d {
+					rt = append(rt, fmt.Sprint(v))
+				}
+				return rt
+			}()
+
+			actual, err := pr.Select(line)
+			as.Nil(err)
+
+			as.Equalf(expect, actual, "%s", q)
+		}
 	})
+}
 
-	t.Run("indexに範囲を超えるものがあると", func(t *testing.T) {
-		_, err := ParseResult{SelectedColumns: []int{1, 2, len(line) + 1}}.Select(line)
-		as.Error(err, "例外が投げられる")
-	})
+func TestNewRange(t *testing.T) {
+	as := assert.New(t)
+	data := map[string]Range{
+		"1":      {start: 1, stop: newPositionIndex(1), step: 1},
+		"1:10":   {start: 1, stop: newPositionIndex(10), step: 1},
+		"1:":     {start: 1, stop: newInfIndex(), step: 1},
+		":":      {start: 1, stop: newInfIndex(), step: 1},
+		":4":     {start: 1, stop: newPositionIndex(4), step: 1},
+		"2:10:3": {start: 2, stop: newPositionIndex(10), step: 3},
+		"3:10:":  {start: 3, stop: newPositionIndex(10), step: 1},
+		"4::10":  {start: 4, stop: newInfIndex(), step: 10},
+		"5::":    {start: 5, stop: newInfIndex(), step: 1},
+		"::":     {start: 1, stop: newInfIndex(), step: 1},
+		":6:":    {start: 1, stop: newPositionIndex(6), step: 1},
+		":6:3":   {start: 1, stop: newPositionIndex(6), step: 3},
+		"::3":    {start: 1, stop: newInfIndex(), step: 3},
+		"-6":     {start: -6, stop: newPositionIndex(-6), step: 1},
+		"-3:":    {start: -3, stop: newInfIndex(), step: 1},
+	}
 
-	t.Run("indexに0があると", func(t *testing.T) {
-		actual, err := ParseResult{SelectedColumns: []int{1, 2, 0}}.Select(line)
+	for q, expect := range data {
+		actual, err := newRange(q)
 		as.Nil(err)
-		as.Equal(append([]string{line[0], line[1]}, line...), actual, "全部が選ばれる")
-	})
+		as.Equal(expect, actual, fmt.Sprintf("query: %s", q))
+	}
 
-	t.Run("同じ数字を選んでもよい", func(t *testing.T) {
-		actual, err := ParseResult{SelectedColumns: []int{1, 1, 1}}.Select(line)
+}
+
+func TestRange_Enumerate(t *testing.T) {
+	as := assert.New(t)
+
+	data := []struct {
+		q      string
+		max    int
+		expect []int
+	}{
+		{q: "1:10", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "1", max: 10, expect: []int{1}},
+		{q: "10", max: 10, expect: []int{10}},
+		{q: "1:", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: ":10", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "3:7", max: 10, expect: []int{3, 4, 5, 6, 7}},
+		{q: "-1", max: 10, expect: []int{10}},
+		{q: "-3:", max: 10, expect: []int{8, 9, 10}},
+		{q: ":-3", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8}},
+		{q: "1:10:1", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "1:10:", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "1:10:3", max: 10, expect: []int{1, 4, 7, 10}},
+		{q: "10:1:-1", max: 10, expect: []int{10, 9, 8, 7, 6, 5, 4, 3, 2, 1}},
+		{q: "8:4:-1", max: 10, expect: []int{8, 7, 6, 5, 4}},
+		{q: "1::", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: ":10:1", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: ":10:", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "::", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "::1", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: ":", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "::3", max: 10, expect: []int{1, 4, 7, 10}},
+		{q: "10:", max: 10, expect: []int{10}},
+		{q: "1:20", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{q: "-4::1", max: 10, expect: []int{7, 8, 9, 10}},
+		{q: ":-4:1", max: 10, expect: []int{1, 2, 3, 4, 5, 6, 7}},
+		{q: "-8:-4:1", max: 10, expect: []int{3, 4, 5, 6, 7}},
+		{q: "-4:-8:-1", max: 10, expect: []int{7, 6, 5, 4, 3}},
+		{q: "1:2:3", max: 10, expect: []int{1}},
+		{q: "1:1", max: 10, expect: []int{1}},
+		{q: "1:1:1", max: 10, expect: []int{1}},
+		{q: "1:4:-1", max: 10, expect: nil},
+		{q: "4:3:1", max: 10, expect: nil},
+		{q: "4:3:", max: 10, expect: nil},
+		{q: "4:3", max: 10, expect: nil},
+		{q: "::-1", max: 10, expect: nil},
+		{q: "8:4:1", max: 10, expect: nil},
+		{q: "-8:-4:-1", max: 10, expect: nil},
+	}
+
+	for _, v := range data {
+		r, err := newRange(v.q)
 		as.Nil(err)
-		as.Equal([]string{line[0], line[0], line[0]}, actual)
-	})
+		var actual []int
+		for idx := range r.Enumerate(v.max) {
+			actual = append(actual, idx)
+		}
+
+		as.Equalf(v.expect, actual, "%s", v.q)
+	}
 }
