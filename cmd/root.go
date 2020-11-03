@@ -15,7 +15,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "sel [OPTION] [QUERY]",
+	Use:   "sel",
 	Short: "select column",
 	Long: `
           _ 

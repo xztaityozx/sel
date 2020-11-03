@@ -2,27 +2,29 @@ package parser
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
 type ParseResult struct {
-	SelectedColumns []int
+	Ranges []Range
 }
 
 // Select select columns
 func (pr ParseResult) Select(s []string) ([]string, error) {
 	var rt []string
 	l := len(s)
-	for _, idx := range pr.SelectedColumns {
-		if l < idx || idx < 0 {
-			return nil, fmt.Errorf("index out of range: selected=%d, length=%d", idx, l)
-		} else if idx == 0 {
-			// index 0 is line. like awk
-			rt = append(rt, s...)
-		} else {
-			rt = append(rt, s[idx-1])
+	for _, r := range pr.Ranges {
+		for idx := range r.Enumerate(l) {
+			if idx == 0 {
+				// index zero is all columns. (like awk)
+				rt = append(rt, s...)
+			} else if 0 <= idx-1 && idx-1 < l {
+				// select index
+				rt = append(rt, s[idx-1])
+			} else {
+				return nil, fmt.Errorf("index out of range")
+			}
 		}
 	}
 
@@ -38,70 +40,128 @@ func New(q ...string) Parser {
 }
 
 func (p Parser) Parse() (ParseResult, error) {
-	var enumerated []int
-
-	c := regexp.MustCompile(`^\d+$`)
-	se := regexp.MustCompile(`^\d+:\d+$`)
-	sse := regexp.MustCompile(`^\d+:\d+:\d+$`)
-
-	var start, step, stop int
-
+	var ranges []Range
 	for _, v := range p.query {
-		split := strings.Split(v, ":")
-
-		if c.MatchString(v) {
-			// \d+ column
-			// Ex) 1
-			start, _ = strconv.Atoi(split[0])
-			step = 1
-			stop = start
-		} else if se.MatchString(v) {
-			// \d+:\d+ start:stop
-			// Ex) 1:2
-			start, _ = strconv.Atoi(split[0])
-			step = 1
-			stop, _ = strconv.Atoi(split[1])
-		} else if sse.MatchString(v) {
-			// \d+:\d+:\d+ start:step:stop
-			// Ex) 1:2:3
-			start, _ = strconv.Atoi(split[0])
-			step, _ = strconv.Atoi(split[1])
-			stop, _ = strconv.Atoi(split[2])
-		} else {
-			return ParseResult{}, fmt.Errorf("%s is invalid query", v)
-		}
-
-		e, err := enumerate(start, step, stop)
+		r, err := newRange(v)
 		if err != nil {
 			return ParseResult{}, err
 		}
-		enumerated = append(enumerated, e...)
+
+		ranges = append(ranges, r)
 	}
 
-	return ParseResult{SelectedColumns: enumerated}, nil
+	return ParseResult{Ranges: ranges}, nil
 }
 
-func enumerate(start, step, stop int) ([]int, error) {
-	if step <= 0 {
-		return nil, fmt.Errorf("step must be greater than zero")
-	}
+type Range struct {
+	start int
+	stop  index
+	step  int
+}
 
-	if start < 0 || stop < 0 {
-		return nil, fmt.Errorf("column number must be greater equal zero")
-	}
+type index struct {
+	num int
+	inf bool
+}
 
-	var rt []int
-	if stop < start {
-		for i := start; i >= stop; i -= step {
-			rt = append(rt, i)
+func newPositionIndex(idx int) index {
+	return index{num: idx, inf: false}
+}
+
+func newInfIndex() index {
+	return index{inf: true}
+}
+
+func newRange(query string) (Range, error) {
+	var err error
+	split := strings.Split(query, ":")
+	if len(split) == 1 {
+		// \d+
+		idx, err := strconv.Atoi(split[0])
+		return Range{
+			start: idx,
+			stop:  newPositionIndex(idx),
+			step:  1,
+		}, err
+	} else if len(split) == 2 || len(split) == 3 {
+		// \d*:\d*:\d*
+		start := 1
+		if len(split[0]) != 0 {
+			idx, err := strconv.Atoi(split[0])
+			if err != nil {
+				return Range{}, err
+			}
+			start = idx
 		}
-	} else if start < stop {
-		for i := start; i <= stop; i += step {
-			rt = append(rt, i)
+
+		stop := newInfIndex()
+		if len(split[1]) != 0 {
+			idx, err := strconv.Atoi(split[1])
+			if err != nil {
+				return Range{}, err
+			}
+			stop = newPositionIndex(idx)
 		}
-	} else {
-		rt = append(rt, start)
+
+		step := 1
+		if len(split) == 3 && len(split[2]) != 0 {
+			step, err = strconv.Atoi(split[2])
+			if err != nil {
+				return Range{}, err
+			}
+		}
+
+		if step == 0 {
+			return Range{}, fmt.Errorf("step cannot be zero")
+		}
+
+		return Range{start: start, stop: stop, step: step}, nil
 	}
 
-	return rt, nil
+	return Range{}, fmt.Errorf("failed to parse query: %s", query)
+}
+
+// Enumerate enumerate index
+func (r Range) Enumerate(max int) <-chan int {
+	rt := make(chan int)
+
+	go func() {
+		defer close(rt)
+
+		start := r.start
+		if start < 0 {
+			start = max + start + 1
+		}
+
+		stop := r.stop.num
+		if r.stop.inf || stop >= max {
+			stop = max
+		}
+		if stop < 0 {
+			stop = max + stop + 1
+		}
+
+		step := r.step
+
+		if start == stop {
+			rt <- start
+		} else if start < stop {
+			if step < 0 {
+				return
+			}
+			for idx := start; idx <= stop; idx += step {
+				rt <- idx
+			}
+		} else {
+			if step > 0 {
+				return
+			}
+			for idx := start; idx >= stop; idx += step {
+				rt <- idx
+			}
+		}
+
+	}()
+
+	return rt
 }
