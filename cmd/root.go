@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -43,8 +44,9 @@ __sel__ect column`,
 			InPlace: viper.GetBool("in-place"),
 			Backup:  viper.GetBool("backup"),
 			DelimiterOption: option.DelimiterOption{
-				Input:  viper.GetString("input-delimiter"),
-				OutPut: viper.GetString("output-delimiter"),
+				Input:       viper.GetString("input-delimiter"),
+				OutPut:      viper.GetString("output-delimiter"),
+				RemoveEmpty: viper.GetBool("remove-empty"),
 			},
 			InputFiles: option.InputFiles{Files: viper.GetStringSlice("input-files")},
 		}
@@ -66,6 +68,7 @@ func init() {
 	rootCmd.Flags().StringSliceP("input-files", "f", nil, "input files")
 	rootCmd.Flags().StringP("input-delimiter", "d", " ", "sets field delimiter(input)")
 	rootCmd.Flags().StringP("output-delimiter", "D", " ", "sets field delimiter(output)")
+	rootCmd.Flags().BoolP("remove-empty", "r", false, "remove empty sequence")
 	rootCmd.Flags().String("completion", "", "generate completion")
 	_ = rootCmd.Flags().MarkHidden("completion")
 	_ = rootCmd.MarkFlagFilename("input-files")
@@ -75,6 +78,7 @@ func init() {
 		"input-files",
 		"input-delimiter", "output-delimiter",
 		"completion",
+		"remove-empty",
 	} {
 		_ = viper.BindPFlag(key, rootCmd.Flags().Lookup(key))
 	}
@@ -102,8 +106,23 @@ func do(opt option.Option, queries []string) error {
 		return err
 	}
 
+	inDelimiter, err := regexp.Compile(opt.Input)
+	if err != nil {
+		return err
+	}
+
 	selector := func(s string) (string, error) {
-		split, err := pr.Select(strings.Split(s, opt.Input))
+		line := func() []string {
+			var rt []string
+			for _, v := range inDelimiter.Split(s, -1) {
+				if opt.RemoveEmpty && len(v) == 0 {
+					continue
+				}
+				rt = append(rt, v)
+			}
+			return rt
+		}()
+		split, err := pr.Select(line)
 		if err != nil {
 			return "", err
 		}
