@@ -3,7 +3,7 @@
 
 ![Go](https://github.com/xztaityozx/sel/workflows/Go/badge.svg)
 
-_cut(1)_ clone with `awk`'s column selection and slice notation.
+extra _cut(1)_ command with `awk`'s column selection and slice notation.
 
 ![example](./img/example.png)
 
@@ -14,7 +14,8 @@ $ go get -u github.com/xztaityozx/sel
 ```
 
 ## Download binary from GitHub Releases
-WIP
+Download prebuild binary from [release page](https://github.com/xztaityozx/sel/releases)
+
 
 ## (Optional) Shell completion script
 Completion script is available for bash, fish, PowerShell and zsh.
