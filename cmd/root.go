@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 __sel__ect column`,
 	Example: "sel 1",
 	Args:    cobra.MinimumNArgs(1),
-	Version: "0.0.1",
+	Version: "1.0.0",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		if shell := viper.GetString("completion"); len(shell) != 0 {
 			err := Completion{W: os.Stdout}.Gen(cmd, shell)
