@@ -24,6 +24,8 @@ type DelimiterOption struct {
 	Input string
 	// --output-delimiter
 	OutPut string
+	// --remove-empty
+	RemoveEmpty bool
 }
 
 // InputFiles is setting for -f, --input-files option
