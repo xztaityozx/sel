@@ -1,6 +1,15 @@
 name: Go
 
-on: ["push"]
+on: 
+  push:
+    paths: 
+      - '**.go'
+      - '.github/workflows/**'
+  pull_request:
+    paths: 
+      - '**.go'
+      - '.github/workflows/**'
+
 jobs:
   linter:
     name: "golang-linter"
