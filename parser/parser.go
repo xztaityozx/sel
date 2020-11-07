@@ -15,7 +15,7 @@ func (pr ParseResult) Select(s []string) ([]string, error) {
 	var rt []string
 	l := len(s)
 	for _, r := range pr.Ranges {
-		for idx := range r.Enumerate(l) {
+		for _, idx := range r.Enumerate(l) {
 			if idx == 0 {
 				// index zero is all columns. (like awk)
 				rt = append(rt, s...)
@@ -122,46 +122,41 @@ func newRange(query string) (Range, error) {
 }
 
 // Enumerate enumerate index
-func (r Range) Enumerate(max int) <-chan int {
-	rt := make(chan int)
+func (r Range) Enumerate(max int) []int {
+	var rt []int
 
-	go func() {
-		defer close(rt)
+	start := r.start
+	if start < 0 {
+		start = max + start + 1
+	}
 
-		start := r.start
-		if start < 0 {
-			start = max + start + 1
+	stop := r.stop.num
+	if r.stop.inf || stop >= max {
+		stop = max
+	}
+	if stop < 0 {
+		stop = max + stop + 1
+	}
+
+	step := r.step
+
+	if start == stop {
+		return []int{start}
+	} else if start < stop {
+		if step < 0 {
+			return nil
 		}
-
-		stop := r.stop.num
-		if r.stop.inf || stop >= max {
-			stop = max
+		for idx := start; idx <= stop; idx += step {
+			rt = append(rt, idx)
 		}
-		if stop < 0 {
-			stop = max + stop + 1
+	} else {
+		if step > 0 {
+			return nil
 		}
-
-		step := r.step
-
-		if start == stop {
-			rt <- start
-		} else if start < stop {
-			if step < 0 {
-				return
-			}
-			for idx := start; idx <= stop; idx += step {
-				rt <- idx
-			}
-		} else {
-			if step > 0 {
-				return
-			}
-			for idx := start; idx >= stop; idx += step {
-				rt <- idx
-			}
+		for idx := start; idx >= stop; idx += step {
+			rt = append(rt, idx)
 		}
-
-	}()
+	}
 
 	return rt
 }
