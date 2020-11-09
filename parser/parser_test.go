@@ -177,7 +177,7 @@ func TestRange_Enumerate(t *testing.T) {
 		r, err := newRange(v.q)
 		as.Nil(err)
 		var actual []int
-		for idx := range r.Enumerate(v.max) {
+		for _, idx := range r.Enumerate(v.max) {
 			actual = append(actual, idx)
 		}
 
