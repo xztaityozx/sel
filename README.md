@@ -26,7 +26,7 @@ $ eval "$(sel --completion bash -)"
 # for fish
 $ eval "$(sel --completion fish -)"
 # for PowerShell
-$ eval "$(sel --completion PowerShell -)"
+$ iex "$(sel --completion PowerShell -)"
 # for zsh
 $ eval "$(sel --completion zsh -)"
 ```
