@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 __sel__ect column`,
 	Example: "sel 1",
 	Args:    cobra.MinimumNArgs(1),
-	Version: "1.0.0",
+	Version: "1.1.0",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		if shell := viper.GetString("completion"); len(shell) != 0 {
 			err := Completion{W: os.Stdout}.Gen(cmd, shell)
@@ -44,9 +44,10 @@ __sel__ect column`,
 			InPlace: viper.GetBool("in-place"),
 			Backup:  viper.GetBool("backup"),
 			DelimiterOption: option.DelimiterOption{
-				Input:       viper.GetString("input-delimiter"),
-				OutPut:      viper.GetString("output-delimiter"),
-				RemoveEmpty: viper.GetBool("remove-empty"),
+				InputDelimiter:  viper.GetString("input-delimiter"),
+				OutPutDelimiter: viper.GetString("output-delimiter"),
+				RemoveEmpty:     viper.GetBool("remove-empty"),
+				UseRegexp:       viper.GetBool("use-regexp"),
 			},
 			InputFiles: option.InputFiles{Files: viper.GetStringSlice("input-files")},
 		}
@@ -70,13 +71,14 @@ func init() {
 	rootCmd.Flags().StringP("output-delimiter", "D", " ", "sets field delimiter(output)")
 	rootCmd.Flags().BoolP("remove-empty", "r", false, "remove empty sequence")
 	rootCmd.Flags().String("completion", "", "generate completion")
+	rootCmd.Flags().BoolP("use-regexp", "g", false, "use regular expressions for input delimiter")
 	_ = rootCmd.Flags().MarkHidden("completion")
 	_ = rootCmd.MarkFlagFilename("input-files")
 
 	for _, key := range []string{
 		"in-place", "backup",
 		"input-files",
-		"input-delimiter", "output-delimiter",
+		"input-delimiter", "output-delimiter", "use-regexp",
 		"completion",
 		"remove-empty",
 	} {
@@ -106,15 +108,30 @@ func do(opt option.Option, queries []string) error {
 		return err
 	}
 
-	inDelimiter, err := regexp.Compile(opt.Input)
-	if err != nil {
-		return err
+	// --use-regexpならRegexpをコンパイルしておく
+	var delmRegexp *regexp.Regexp
+	if opt.UseRegexp {
+		var err error
+		delmRegexp, err = regexp.Compile(opt.InputDelimiter)
+		if err != nil {
+			return err
+		}
 	}
 
+	// 文字列の分割Function
+	spliter := func(in string) []string {
+		if opt.UseRegexp {
+			return delmRegexp.Split(in, -1)
+		} else {
+			return strings.Split(in, opt.InputDelimiter)
+		}
+	}
+
+	// カラム選択Function
 	selector := func(s string) (string, error) {
 		line := func() []string {
 			var rt []string
-			for _, v := range inDelimiter.Split(s, -1) {
+			for _, v := range spliter(s) {
 				if opt.RemoveEmpty && len(v) == 0 {
 					continue
 				}
@@ -127,7 +144,7 @@ func do(opt option.Option, queries []string) error {
 			return "", err
 		}
 
-		return strings.Join(split, opt.OutPut), nil
+		return strings.Join(split, opt.OutPutDelimiter), nil
 	}
 
 	if len(opt.Files) == 0 {

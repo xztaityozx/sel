@@ -176,10 +176,7 @@ func TestRange_Enumerate(t *testing.T) {
 	for _, v := range data {
 		r, err := newRange(v.q)
 		as.Nil(err)
-		var actual []int
-		for idx := range r.Enumerate(v.max) {
-			actual = append(actual, idx)
-		}
+		actual := r.Enumerate(v.max)
 
 		as.Equalf(v.expect, actual, "%s", v.q)
 	}

@@ -21,11 +21,13 @@ type Option struct {
 // DelimiterOption is setting for --input/output-delimiter option
 type DelimiterOption struct {
 	// --input-delimiter
-	Input string
+	InputDelimiter string
 	// --output-delimiter
-	OutPut string
+	OutPutDelimiter string
 	// --remove-empty
 	RemoveEmpty bool
+	// --use-regexp
+	UseRegexp bool
 }
 
 // InputFiles is setting for -f, --input-files option
