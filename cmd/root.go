@@ -146,7 +146,11 @@ func run(input *os.File, splitter column.Splitter, writer *column.Writer, select
 				return err
 			}
 		}
+
+		if err := writer.WriteNewLine(); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return writer.Flush()
 }
