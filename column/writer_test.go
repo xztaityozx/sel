@@ -54,6 +54,7 @@ func TestWriter_Write(t *testing.T) {
 			if err := w.Write(tt.args.columns); (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			_ = w.buf.Flush()
 
 			assert.Equal(t, strings.Join(cols, "d"), buf.String())
 		})
