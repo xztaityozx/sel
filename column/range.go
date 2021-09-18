@@ -39,7 +39,7 @@ func (r RangeSelector) Select(strings []string) ([]string, error) {
 		if start > max {
 			return nil, errors.New("index out of range")
 		}
-		return []string{strings[start]}, nil
+		return []string{strings[start-1]}, nil
 	} else if start < stop {
 		if step < 0 {
 			return nil, errors.New(fmt.Sprintf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop))
