@@ -21,19 +21,21 @@ Download prebuild binary from [release page](https://github.com/xztaityozx/sel/r
 Completion script is available for bash, fish, PowerShell and zsh.
 
 ```sh
+# example
 # for bash
-$ eval "$(sel --completion bash -)"
+$ source <(sel completion bash)
 # for fish
-$ eval "$(sel --completion fish -)"
+$ sel completion fish | source
 # for PowerShell
-$ iex "$(sel --completion PowerShell -)"
+$ sel completion powershell | Out-String | Invoke-Expression
 # for zsh
-$ eval "$(sel --completion zsh -)"
+$ sel completion zsh > ${fpath[1]}/_sel
 ```
 
 # Usage
 
 ```
+
           _ 
  ___  ___| |
 / __|/ _ \ |
@@ -43,24 +45,41 @@ $ eval "$(sel --completion zsh -)"
 __sel__ect column
 
 Usage:
-  sel [flags]
+	sel [queries...]
+
+Query:
+	index                        select 'index'
+	start:stop                   select columns from 'start' to 'stop'
+	start:stop:step              select columns each 'step' from 'start' to 'stop'
+
+	start:/end regexp/           select columns from 'start' to /end regexp/
+	/start regexp/:end           select columns from /start regexp/ to 'end'
+	/start regexp/:/end regexp/  select columns from /start regexp/ to /end regexp/
 
 Examples:
-sel 1
+
+	$ cat /path/to/file | sel 1
+	$ sel 1:10 -f ./file
+	$ cat /path/to/file.csv | sel -d, 1 2 3 4 -1 -2 -3 -4
+	$ sel 2:: -f ./file
+
+Available Commands:
+  completion  Generate completion script
+  help        Help about any command
 
 Flags:
-  -b, --backup                    make backup when enable -i/--in-place option
   -h, --help                      help for sel
-  -i, --in-place                  edit files in place
   -d, --input-delimiter string    sets field delimiter(input) (default " ")
   -f, --input-files strings       input files
   -D, --output-delimiter string   sets field delimiter(output) (default " ")
   -r, --remove-empty              remove empty sequence
+  -g, --use-regexp                use regular expressions for input delimiter
   -v, --version                   version for sel
+
+Use "sel [command] --help" for more information about a command.
 ```
 
 # Features
 - one-indexed
 - index `0` refers to the entire line. (like `awk`)
 - slice notation
-- overwrite source file
