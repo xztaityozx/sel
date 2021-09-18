@@ -63,7 +63,7 @@ func TestIndexSelector_Select(t *testing.T) {
 			assert.Equal(t, cols, actual)
 		} else {
 			assert.Equal(t, 1, len(actual))
-			assert.Equal(t, cols[is.index], actual[0])
+			assert.Equal(t, cols[is.index-1], actual[0])
 		}
 	}
 }

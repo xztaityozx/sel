@@ -30,5 +30,5 @@ func (i IndexSelector) Select(strings []string) ([]string, error) {
 		return strings, nil
 	}
 
-	return []string{strings[i.index]}, nil
+	return []string{strings[i.index-1]}, nil
 }
