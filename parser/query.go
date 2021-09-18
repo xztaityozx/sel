@@ -2,9 +2,9 @@ package parser
 
 import "regexp"
 
-//go:generate genny -in "../gen/collections.go" -out "./gen-query-collections.go" -pkg "parser" gen "TSource=Query TResult=Index"
 // Query はクエリ文字列を表すやつ
 type Query string
+type QuerySlice []Query
 
 var indexQueryValidator = regexp.MustCompile(`-?\d*(:-?\d*(:-?\d*)?)?`)
 var switchQueryValidator = regexp.MustCompile(`(\d+|/.+/):(\+?\d+|/.+/)`)
