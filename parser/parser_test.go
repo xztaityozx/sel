@@ -14,7 +14,7 @@ func newSwitchSelector(begin, end string) column.SwitchSelector {
 
 func TestParse(t *testing.T) {
 	type args struct {
-		queries QuerySlice
+		queries []string
 	}
 
 	var cols []string
@@ -29,74 +29,74 @@ func TestParse(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "1 2 3", args: args{queries: QuerySlice{"1", "2", "3"}}, want: []column.Selector{
+			name: "1 2 3", args: args{queries: []string{"1", "2", "3"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewIndexSelector(2),
 				column.NewIndexSelector(3),
 			},
 		},
 		{
-			name: "1 1:5", args: args{queries: QuerySlice{"1", "1:5"}}, want: []column.Selector{
+			name: "1 1:5", args: args{queries: []string{"1", "1:5"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 1, 5, false),
 			},
 		},
 		{
-			name: "1 1:", args: args{queries: QuerySlice{"1", "1:"}}, want: []column.Selector{
+			name: "1 1:", args: args{queries: []string{"1", "1:"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 1, 1, true),
 			},
 		},
 		{
-			name: "1 1:3:", args: args{queries: QuerySlice{"1", "1:3:"}}, want: []column.Selector{
+			name: "1 1:3:", args: args{queries: []string{"1", "1:3:"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 1, 3, false),
 			},
 		},
 		{
-			name: "1 1:3:2", args: args{queries: QuerySlice{"1", "1:3:2"}}, want: []column.Selector{
+			name: "1 1:3:2", args: args{queries: []string{"1", "1:3:2"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 2, 3, false),
 			},
 		},
 		{
-			name: "1 1::2", args: args{queries: QuerySlice{"1", "1::2"}}, want: []column.Selector{
+			name: "1 1::2", args: args{queries: []string{"1", "1::2"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 2, 1, true),
 			},
 		},
 		{
-			name: "1 :10:", args: args{queries: QuerySlice{"1", ":10:"}}, want: []column.Selector{
+			name: "1 :10:", args: args{queries: []string{"1", ":10:"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 1, 10, false),
 			},
 		},
 		{
-			name: "1 :10:4", args: args{queries: QuerySlice{"1", ":10:4"}}, want: []column.Selector{
+			name: "1 :10:4", args: args{queries: []string{"1", ":10:4"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 4, 10, false),
 			},
 		},
 		{
-			name: "1 ::", args: args{queries: QuerySlice{"1", "::"}}, want: []column.Selector{
+			name: "1 ::", args: args{queries: []string{"1", "::"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 1, 1, true),
 			},
 		},
 		{
-			name: "1 1::", args: args{queries: QuerySlice{"1", "1::"}}, want: []column.Selector{
+			name: "1 1::", args: args{queries: []string{"1", "1::"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				column.NewRangeSelector(1, 1, 1, true),
 			},
 		},
 		{
-			name: "1 1:/abc/", args: args{queries: QuerySlice{"1", "1:/abc/"}}, want: []column.Selector{
+			name: "1 1:/abc/", args: args{queries: []string{"1", "1:/abc/"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				newSwitchSelector("1", "/abc/"),
 			},
 		},
 		{
-			name: "1 /xyz/:/abc/", args: args{queries: QuerySlice{"1", "/xyz/:/abc/"}}, want: []column.Selector{
+			name: "1 /xyz/:/abc/", args: args{queries: []string{"1", "/xyz/:/abc/"}}, want: []column.Selector{
 				column.NewIndexSelector(1),
 				newSwitchSelector("/xyz/", "/abc/"),
 			},

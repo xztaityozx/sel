@@ -7,8 +7,13 @@ import (
 	"strings"
 )
 
-func Parse(queries QuerySlice) ([]column.Selector, error) {
-	var rt []column.Selector
+func Parse(args []string) ([]column.Selector, error) {
+	queries := make(QuerySlice, 0, len(args))
+	for _, v := range args {
+		queries = append(queries, Query(v))
+	}
+
+	rt := make([]column.Selector, 0, len(args))
 	var err error
 	for _, query := range queries {
 		if query.isIndexQuery() {
