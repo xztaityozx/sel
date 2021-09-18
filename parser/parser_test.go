@@ -2,7 +2,6 @@ package parser
 
 import (
 	"github.com/xztaityozx/sel/column"
-	"github.com/xztaityozx/sel/test_util"
 	"reflect"
 	"testing"
 )
@@ -15,11 +14,6 @@ func newSwitchSelector(begin, end string) column.SwitchSelector {
 func TestParse(t *testing.T) {
 	type args struct {
 		queries []string
-	}
-
-	var cols []string
-	for i := 0; i < 20; i++ {
-		cols = append(cols, test_util.RandString(20))
 	}
 
 	tests := []struct {

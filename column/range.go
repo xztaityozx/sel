@@ -1,7 +1,6 @@
 package column
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -37,12 +36,12 @@ func (r RangeSelector) Select(strings []string) ([]string, error) {
 
 	if start == stop {
 		if start > max {
-			return nil, errors.New("index out of range")
+			return nil, fmt.Errorf("index out of range")
 		}
 		return []string{strings[start-1]}, nil
 	} else if start < stop {
 		if step < 0 {
-			return nil, errors.New(fmt.Sprintf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop))
+			return nil, fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 		}
 
 		var rt []string
@@ -52,7 +51,7 @@ func (r RangeSelector) Select(strings []string) ([]string, error) {
 		return rt, nil
 	} else {
 		if step > 0 {
-			return nil, errors.New(fmt.Sprintf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop))
+			return nil, fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 		}
 		var rt []string
 		for i := start; i >= stop; i += step {

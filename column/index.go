@@ -1,7 +1,7 @@
 package column
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -24,7 +24,7 @@ func NewIndexSelectorFromString(str string, def int) (IndexSelector, error) {
 
 func (i IndexSelector) Select(strings []string) ([]string, error) {
 	if len(strings) < i.index {
-		return nil, errors.New("index out of range")
+		return nil, fmt.Errorf("index out of range")
 	}
 	if i.index == 0 {
 		return strings, nil
