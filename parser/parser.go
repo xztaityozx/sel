@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/xztaityozx/sel/column"
 	"strconv"
+	"strings"
 )
 
 func Parse(queries QuerySlice) ([]column.Selector, error) {
@@ -11,7 +12,7 @@ func Parse(queries QuerySlice) ([]column.Selector, error) {
 	var err error
 	for _, query := range queries {
 		if query.isIndexQuery() {
-			querySection := indexQueryValidator.Split(string(query), -1)
+			querySection := strings.Split(string(query), ":")
 			if len(querySection) == 1 {
 				idx, err := strconv.Atoi(querySection[0])
 				if err != nil {
@@ -56,8 +57,8 @@ func Parse(queries QuerySlice) ([]column.Selector, error) {
 				return nil, fmt.Errorf("%s is invalid index query", query)
 			}
 		} else if query.isSwitchQuery() {
-			querySection := switchQueryValidator.Split(string(query), -1)
-			ss, err := column.NewSwitchSelector(querySection[0], querySection[1])
+			s := switchQueryValidator.FindAllStringSubmatch(string(query), -1)[0]
+			ss, err := column.NewSwitchSelector(s[1], s[2])
 			if err != nil {
 				return nil, err
 			}
