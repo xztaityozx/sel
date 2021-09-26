@@ -102,11 +102,11 @@ jobs:
         working-directory: ${{ steps.vars.outputs.os }}
         run: |
           [[ "${{ matrix.os }}" != "windows-latest" ]] && {
-            ./sel --completion zsh - > ./sel-completion.zsh
-            ./sel --completion bash - > ./sel-completion.bash
-            ./sel --completion fish - > ./sel-completion.fish
+            ./sel completion zsh > ./sel-completion.zsh
+            ./sel completion bash > ./sel-completion.bash
+            ./sel completion fish > ./sel-completion.fish
           }
-          ./sel --completion PowerShell - > ./sel-completion.ps1
+          ./sel completion powershell > ./sel-completion.ps1
           
       - name: Upload artifact
         uses: actions/upload-artifact@v2.2.0
