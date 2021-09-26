@@ -1,27 +1,43 @@
 package cmd
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/spf13/cobra"
+	"log"
+	"os"
 )
 
-type Completion struct {
-	W io.Writer
+var completionCmd = &cobra.Command{
+	Use:                   "completion [bash|zsh|fish|powershell]",
+	Short:                 "Generate completion script",
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.ExactValidArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		switch args[0] {
+		case "bash":
+			err := cmd.Root().GenBashCompletion(os.Stdout)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		case "zsh":
+			err := cmd.Root().GenZshCompletion(os.Stdout)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		case "fish":
+			err := cmd.Root().GenFishCompletion(os.Stdout, true)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		case "powershell":
+			err := cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+	},
 }
 
-// Gen generate completion script for shell
-func (c Completion) Gen(command *cobra.Command, shell string) error {
-	if shell == "bash" {
-		return command.GenBashCompletion(c.W)
-	} else if shell == "zsh" {
-		return command.GenZshCompletion(c.W)
-	} else if shell == "fish" {
-		return command.GenFishCompletion(c.W, true)
-	} else if shell == "pwsh" || shell == "PowerShell" {
-		return command.GenPowerShellCompletion(c.W)
-	} else {
-		return fmt.Errorf("failed to generate completion for %s", shell)
-	}
+func init() {
+	rootCmd.AddCommand(completionCmd)
 }

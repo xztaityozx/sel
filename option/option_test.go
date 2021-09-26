@@ -2,9 +2,11 @@ package option_test
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 
@@ -82,4 +84,61 @@ func TestInputFiles_Enumerate(t *testing.T) {
 	})
 
 	_ = os.RemoveAll(base)
+}
+
+func TestGetOptionNames(t *testing.T) {
+	tests := []struct {
+		name string
+		want []string
+	}{
+		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := option.GetOptionNames(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetOptionNames() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewOption(t *testing.T) {
+	type args struct {
+		v *viper.Viper
+	}
+	tests := []struct {
+		name string
+		args args
+		want option.Option
+	}{
+		{
+			name: "noname", args: args{
+				v: func() *viper.Viper {
+					v := viper.New()
+					v.Set(option.NameInputFiles, []string{"abc", "def"})
+					v.Set(option.NameInputDelimiter, "i")
+					v.Set(option.NameOutPutDelimiter, "o")
+					v.Set(option.NameRemoveEmpty, true)
+					v.Set(option.NameUseRegexp, true)
+					return v
+				}(),
+			},
+			want: option.Option{
+				InputFiles: option.InputFiles{Files: []string{"abc", "def"}},
+				DelimiterOption: option.DelimiterOption{
+					InputDelimiter:  "i",
+					OutPutDelimiter: "o",
+					RemoveEmpty:     true,
+					UseRegexp:       true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := option.NewOption(tt.args.v); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewOption() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

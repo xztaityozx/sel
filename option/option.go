@@ -2,16 +2,13 @@ package option
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 )
 
 // Option is commandline options
 type Option struct {
-	// -i, --in-place option
-	InPlace bool
-	// -b, --backup
-	Backup bool
 	// --input/output-delimiter option
 	DelimiterOption
 	// -f, --input-files option
@@ -35,7 +32,7 @@ type InputFiles struct {
 	Files []string
 }
 
-// Enumerate enumerate /path/to/input/files
+// Enumerate /path/to/input/files
 func (ifs InputFiles) Enumerate() ([]string, error) {
 	if ifs.Files == nil || len(ifs.Files) == 0 {
 		return nil, fmt.Errorf("there are no files")
@@ -68,4 +65,35 @@ func (ifs InputFiles) Enumerate() ([]string, error) {
 	}
 
 	return rt, nil
+}
+
+const (
+	NameInputDelimiter  = "input-delimiter"
+	NameOutPutDelimiter = "output-delimiter"
+	NameRemoveEmpty     = "remove-empty"
+	NameUseRegexp       = "use-regexp"
+	NameInputFiles      = "input-files"
+)
+
+func GetOptionNames() []string {
+	return []string{
+		NameInputFiles,
+		NameInputDelimiter,
+		NameOutPutDelimiter,
+		NameUseRegexp,
+		NameRemoveEmpty,
+	}
+}
+
+// NewOption は viper.Viper からフラグの値を取り出して Option を作って返す
+func NewOption(v *viper.Viper) Option {
+	return Option{
+		DelimiterOption: DelimiterOption{
+			InputDelimiter:  v.GetString(NameInputDelimiter),
+			OutPutDelimiter: v.GetString(NameOutPutDelimiter),
+			RemoveEmpty:     v.GetBool(NameRemoveEmpty),
+			UseRegexp:       v.GetBool(NameUseRegexp),
+		},
+		InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
+	}
 }

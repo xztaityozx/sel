@@ -2,161 +2,76 @@ package parser
 
 import (
 	"fmt"
+	"github.com/xztaityozx/sel/column"
 	"strconv"
 	"strings"
 )
 
-type ParseResult struct {
-	Ranges []Range
-}
+func Parse(args []string) ([]column.Selector, error) {
+	queries := make(QuerySlice, 0, len(args))
+	for _, v := range args {
+		queries = append(queries, Query(v))
+	}
 
-// Select select columns
-func (pr ParseResult) Select(s []string) ([]string, error) {
-	var rt []string
-	l := len(s)
-	for _, r := range pr.Ranges {
-		for _, idx := range r.Enumerate(l) {
-			if idx == 0 {
-				// index zero is all columns. (like awk)
-				rt = append(rt, s...)
-			} else if 0 <= idx-1 && idx-1 < l {
-				// select index
-				rt = append(rt, s[idx-1])
+	rt := make([]column.Selector, 0, len(args))
+	var err error
+	for _, query := range queries {
+		if query.isIndexQuery() {
+			querySection := strings.Split(string(query), ":")
+			if len(querySection) == 1 {
+				idx, err := strconv.Atoi(querySection[0])
+				if err != nil {
+					return nil, err
+				}
+				rt = append(rt, column.NewIndexSelector(idx))
+			} else if len(querySection) == 2 || len(querySection) == 3 {
+				start := 1
+				if len(querySection[0]) != 0 {
+					idx, err := strconv.Atoi(querySection[0])
+					if err != nil {
+						return nil, err
+					}
+					start = idx
+				}
+
+				isInfStop := true
+				stop := start
+				if len(querySection[1]) != 0 {
+					idx, err := strconv.Atoi(querySection[1])
+					if err != nil {
+						return nil, err
+					}
+					stop = idx
+					isInfStop = false
+				}
+
+				step := 1
+				if len(querySection) == 3 && len(querySection[2]) != 0 {
+					step, err = strconv.Atoi(querySection[2])
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				if step == 0 {
+					return nil, fmt.Errorf("step cannot be zero")
+				}
+
+				rt = append(rt, column.NewRangeSelector(start, step, stop, isInfStop))
 			} else {
-				return nil, fmt.Errorf("index out of range")
+				return nil, fmt.Errorf("%s is invalid index query", query)
 			}
+		} else if query.isSwitchQuery() {
+			s := switchQueryValidator.FindAllStringSubmatch(string(query), -1)[0]
+			ss, err := column.NewSwitchSelector(s[1], s[2])
+			if err != nil {
+				return nil, err
+			}
+			rt = append(rt, ss)
+		} else {
+			return nil, fmt.Errorf("%s is invalid query", query)
 		}
 	}
 
 	return rt, nil
-}
-
-type Parser struct {
-	query []string
-}
-
-func New(q ...string) Parser {
-	return Parser{query: q}
-}
-
-func (p Parser) Parse() (ParseResult, error) {
-	var ranges []Range
-	for _, v := range p.query {
-		r, err := newRange(v)
-		if err != nil {
-			return ParseResult{}, err
-		}
-
-		ranges = append(ranges, r)
-	}
-
-	return ParseResult{Ranges: ranges}, nil
-}
-
-type Range struct {
-	start int
-	stop  index
-	step  int
-}
-
-type index struct {
-	num int
-	inf bool
-}
-
-func newPositionIndex(idx int) index {
-	return index{num: idx, inf: false}
-}
-
-func newInfIndex() index {
-	return index{inf: true}
-}
-
-func newRange(query string) (Range, error) {
-	var err error
-	split := strings.Split(query, ":")
-	if len(split) == 1 {
-		// \d+
-		idx, err := strconv.Atoi(split[0])
-		return Range{
-			start: idx,
-			stop:  newPositionIndex(idx),
-			step:  1,
-		}, err
-	} else if len(split) == 2 || len(split) == 3 {
-		// \d*:\d*:\d*
-		start := 1
-		if len(split[0]) != 0 {
-			idx, err := strconv.Atoi(split[0])
-			if err != nil {
-				return Range{}, err
-			}
-			start = idx
-		}
-
-		stop := newInfIndex()
-		if len(split[1]) != 0 {
-			idx, err := strconv.Atoi(split[1])
-			if err != nil {
-				return Range{}, err
-			}
-			stop = newPositionIndex(idx)
-		}
-
-		step := 1
-		if len(split) == 3 && len(split[2]) != 0 {
-			step, err = strconv.Atoi(split[2])
-			if err != nil {
-				return Range{}, err
-			}
-		}
-
-		if step == 0 {
-			return Range{}, fmt.Errorf("step cannot be zero")
-		}
-
-		return Range{start: start, stop: stop, step: step}, nil
-	}
-
-	return Range{}, fmt.Errorf("failed to parse query: %s", query)
-}
-
-// Enumerate enumerate index
-func (r Range) Enumerate(max int) []int {
-	var rt []int
-
-	start := r.start
-	if start < 0 {
-		start = max + start + 1
-	}
-
-	stop := r.stop.num
-	if r.stop.inf || stop >= max {
-		stop = max
-	}
-	if stop < 0 {
-		stop = max + stop + 1
-	}
-
-	step := r.step
-
-	if start == stop {
-		return []int{start}
-	} else if start < stop {
-		if step < 0 {
-			return nil
-		}
-		for idx := start; idx <= stop; idx += step {
-			rt = append(rt, idx)
-		}
-	} else {
-		if step > 0 {
-			return nil
-		}
-		for idx := start; idx >= stop; idx += step {
-			rt = append(rt, idx)
-		}
-	}
-
-	return rt
 }
