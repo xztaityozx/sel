@@ -23,6 +23,7 @@ func TestNewIndexSelectorFromString(t *testing.T) {
 		{name: "10", args: args{str: "10", def: 0}, want: IndexSelector{index: 10}},
 		{name: "failed to parse", args: args{str: "a", def: 0}, want: IndexSelector{}, wantErr: true},
 		{name: "", args: args{str: "10", def: 10}, want: IndexSelector{index: 10}},
+		{name: "-1", args: args{str: "-1", def: 10}, want: IndexSelector{index: -1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
