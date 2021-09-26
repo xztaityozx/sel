@@ -17,7 +17,7 @@ func NewRangeSelector(start, step, stop int, isInfStop bool) RangeSelector {
 }
 
 func (r RangeSelector) Select(strings []string) ([]string, error) {
-	max := len(strings) - 1
+	max := len(strings)
 
 	start := r.start
 	if start < 0 {
@@ -46,7 +46,11 @@ func (r RangeSelector) Select(strings []string) ([]string, error) {
 
 		var rt []string
 		for i := start; i <= stop; i += step {
-			rt = append(rt, strings[i])
+			if i == 0 {
+				rt = append(rt, strings...)
+			} else {
+				rt = append(rt, strings[i-1])
+			}
 		}
 		return rt, nil
 	} else {
@@ -55,7 +59,11 @@ func (r RangeSelector) Select(strings []string) ([]string, error) {
 		}
 		var rt []string
 		for i := start; i >= stop; i += step {
-			rt = append(rt, strings[i])
+			if i == 0 {
+				rt = append(rt, strings...)
+			} else {
+				rt = append(rt, strings[i-1])
+			}
 		}
 
 		return rt, nil
