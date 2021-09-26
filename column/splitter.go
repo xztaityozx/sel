@@ -11,13 +11,13 @@ type Splitter struct {
 	removeEmpty bool
 }
 
-func NewSplitter(str string) Splitter {
-	return Splitter{reg: nil, str: str}
+func NewSplitter(str string, removeEmpty bool) Splitter {
+	return Splitter{reg: nil, str: str, removeEmpty: removeEmpty}
 }
 
-func NewSplitterRegexp(query string) (Splitter, error) {
+func NewSplitterRegexp(query string, removeEmpty bool) (Splitter, error) {
 	r, e := regexp.Compile(query)
-	return Splitter{reg: r}, e
+	return Splitter{reg: r, removeEmpty: removeEmpty}, e
 }
 
 func (s Splitter) Split(line string) []string {

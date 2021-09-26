@@ -1,10 +1,11 @@
 package column
 
 import (
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSplitter(t *testing.T) {
@@ -27,7 +28,7 @@ func TestNewSplitter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSplitter(tt.args.str); !reflect.DeepEqual(got, tt.want) {
+			if got := NewSplitter(tt.args.str, false); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewSplitter() = %v, want %v", got, tt.want)
 			}
 		})
@@ -58,7 +59,7 @@ func TestNewSplitterRegexp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewSplitterRegexp(tt.args.query)
+			got, err := NewSplitterRegexp(tt.args.query, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSplitterRegexp() error = %v, wantErr %v", err, tt.wantErr)
 				return

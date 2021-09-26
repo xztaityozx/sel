@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"log"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 var completionCmd = &cobra.Command{
@@ -40,4 +41,5 @@ var completionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(completionCmd)
+	completionCmd.SetUsageTemplate(completionCmd.Use)
 }

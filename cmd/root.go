@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"bufio"
+	"log"
+	"os"
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xztaityozx/sel/column"
 	"github.com/xztaityozx/sel/option"
 	"github.com/xztaityozx/sel/parser"
-	"log"
-	"os"
-	"strings"
 )
 
 var rootCmd = &cobra.Command{
@@ -35,12 +36,12 @@ __sel__ect column`,
 		w := column.NewWriter(opt.OutPutDelimiter, os.Stdout)
 		var splitter column.Splitter
 		if opt.UseRegexp {
-			splitter, err = column.NewSplitterRegexp(opt.InputDelimiter)
+			splitter, err = column.NewSplitterRegexp(opt.InputDelimiter, opt.RemoveEmpty)
 			if err != nil {
 				log.Fatalln(err)
 			}
 		} else {
-			splitter = column.NewSplitter(opt.InputDelimiter)
+			splitter = column.NewSplitter(opt.InputDelimiter, opt.RemoveEmpty)
 		}
 
 		if len(opt.Files) != 0 {
