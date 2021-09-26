@@ -43,11 +43,11 @@ func TestRangeSelector_Select(t *testing.T) {
 			stop    int
 			expects []int
 		}{
-			{start: 1, step: 1, stop: 5, expects: []int{1, 2, 3, 4, 5}},
-			{start: 5, step: -1, stop: 1, expects: []int{5, 4, 3, 2, 1}},
+			{start: 1, step: 1, stop: 5, expects: []int{0, 1, 2, 3, 4}},
+			{start: 5, step: -1, stop: 1, expects: []int{4, 3, 2, 1, 0}},
 			{start: 1, step: 1, stop: 1, expects: []int{0}},
 			{start: -1, step: -1, stop: -5, expects: []int{19, 18, 17, 16, 15}},
-			{start: 1, step: 2, stop: 10, expects: []int{1, 3, 5, 7, 9}},
+			{start: 1, step: 2, stop: 10, expects: []int{0, 2, 4, 6, 8}},
 			{start: -1, step: -2, stop: -10, expects: []int{19, 17, 15, 13, 11}},
 		}
 
@@ -56,7 +56,7 @@ func TestRangeSelector_Select(t *testing.T) {
 			expect := expectFactory(v.expects)
 			actual, err := rs.Select(cols)
 			assert.Nil(t, err)
-			assert.Equal(t, expect, actual)
+			assert.Equal(t, expect, actual, "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
 		}
 	})
 
