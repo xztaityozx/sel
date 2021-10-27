@@ -1,9 +1,11 @@
 package column
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 )
@@ -36,6 +38,9 @@ func TestRangeSelector_Select(t *testing.T) {
 		return rt
 	}
 
+	var buf []byte
+	w := bytes.NewBuffer(buf)
+
 	t.Run("OK", func(t *testing.T) {
 		dataset := []struct {
 			start   int
@@ -54,9 +59,12 @@ func TestRangeSelector_Select(t *testing.T) {
 		for _, v := range dataset {
 			rs := NewRangeSelector(v.start, v.step, v.stop, false)
 			expect := expectFactory(v.expects)
-			actual, err := rs.Select(cols)
+			writer := NewWriter(" ", w)
+			err := rs.Select(writer, &testEnumerable{a: cols})
+			assert.Nil(t, writer.Flush())
 			assert.Nil(t, err)
-			assert.Equal(t, expect, actual, "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
+			assert.Equal(t, strings.Join(expect, " "), w.String() , "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
+			w.Reset()
 		}
 	})
 
@@ -73,16 +81,21 @@ func TestRangeSelector_Select(t *testing.T) {
 
 		for _, v := range dataset {
 			rs := NewRangeSelector(v.start, v.step, v.stop, false)
-			actual, err := rs.Select(cols)
+			writer := NewWriter(" ", w)
+			err := rs.Select(writer, &testEnumerable{a: cols})
+			assert.Nil(t, writer.Flush())
 			assert.NotNil(t, err)
-			assert.Nil(t, actual)
+			assert.Equal(t, 0, len(w.String()))
+			w.Reset()
 		}
 	})
 
 	t.Run("Inf", func(t *testing.T) {
 		rs := NewRangeSelector(1, 1, 1, true)
-		actual, err := rs.Select(cols)
+		writer := NewWriter(" ", w)
+		err := rs.Select(writer, &testEnumerable{a: cols})
+		assert.Nil(t, writer.Flush())
 		assert.Nil(t, err)
-		assert.Equal(t, cols, actual)
+		assert.Equal(t, strings.Join(cols, " "), w.String())
 	})
 }

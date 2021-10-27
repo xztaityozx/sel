@@ -2,6 +2,7 @@ package column
 
 import (
 	"fmt"
+	"github.com/xztaityozx/sel/iterator"
 )
 
 // RangeSelector はカラムの範囲選択するやつ
@@ -16,7 +17,8 @@ func NewRangeSelector(start, step, stop int, isInfStop bool) RangeSelector {
 	return RangeSelector{start: start, step: step, stop: stop, isInfStop: isInfStop}
 }
 
-func (r RangeSelector) Select(strings []string) ([]string, error) {
+func (r RangeSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+	strings := iter.ToArray()
 	max := len(strings)
 
 	start := r.start
@@ -36,36 +38,67 @@ func (r RangeSelector) Select(strings []string) ([]string, error) {
 
 	if start == stop {
 		if start > max {
-			return nil, fmt.Errorf("index out of range")
+			return fmt.Errorf("index out of range")
 		}
-		return []string{strings[start-1]}, nil
+
+		return w.Write(strings[start-1])
 	} else if start < stop {
 		if step < 0 {
-			return nil, fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop)
+			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 		}
 
-		var rt []string
+		l := 0
 		for i := start; i <= stop; i += step {
 			if i == 0 {
-				rt = append(rt, strings...)
+				l += len(strings)
 			} else {
-				rt = append(rt, strings[i-1])
-			}
-		}
-		return rt, nil
-	} else {
-		if step > 0 {
-			return nil, fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop)
-		}
-		var rt []string
-		for i := start; i >= stop; i += step {
-			if i == 0 {
-				rt = append(rt, strings...)
-			} else {
-				rt = append(rt, strings[i-1])
+				l++
 			}
 		}
 
-		return rt, nil
+		rt := make([]string, l)
+		idx := 0
+		for i := start; i <= stop; i += step {
+			if i == 0 {
+				for _, v := range strings {
+					rt[idx] = v
+					idx++
+				}
+			} else {
+				rt[idx] = strings[i-1]
+				idx++
+			}
+		}
+
+		return w.Write(rt...)
+	} else {
+		if step > 0 {
+			return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop)
+		}
+
+		l := 0
+		for i := start; i >= stop; i += step {
+			if i == 0 {
+				l += len(strings)
+			} else {
+				l++
+			}
+		}
+
+		rt := make([]string, l)
+		idx := 0
+		for i := start; i >= stop; i += step {
+			if i == 0 {
+				for _, v := range strings {
+					rt[idx] = v
+					idx++
+				}
+			} else {
+				rt[idx] = strings[i-1]
+				idx++
+			}
+		}
+
+		return w.Write(rt...)
 	}
 }

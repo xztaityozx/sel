@@ -1,7 +1,7 @@
 package column
 
 import (
-	"fmt"
+	"github.com/xztaityozx/sel/iterator"
 	"strconv"
 )
 
@@ -22,17 +22,15 @@ func NewIndexSelectorFromString(str string, def int) (IndexSelector, error) {
 	return NewIndexSelector(num), err
 }
 
-func (i IndexSelector) Select(strings []string) ([]string, error) {
-	if len(strings) < i.index {
-		return nil, fmt.Errorf("index out of range")
-	}
+func (i IndexSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+
 	if i.index == 0 {
-		return strings, nil
+		return w.Write(iter.ToArray()...)
 	}
 
-	if i.index < 0 {
-		return []string{strings[len(strings)+(i.index)]}, nil
+	item, err := iter.ElementAt(i.index)
+	if err != nil {
+		return err
 	}
-
-	return []string{strings[i.index-1]}, nil
+	return w.Write(item)
 }

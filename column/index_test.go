@@ -1,10 +1,14 @@
 package column
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/iterator"
 	"github.com/xztaityozx/sel/test_util"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,14 +61,19 @@ func TestIndexSelector_Select(t *testing.T) {
 
 		is := IndexSelector{index: rand.Int() % 10}
 
-		actual, err := is.Select(cols)
+		var buf []byte
+		w := bytes.NewBuffer(buf)
+
+		writer := NewWriter(" ", w)
+
+		err := is.Select(writer, iterator.NewIterator(strings.Join(cols, " "), " ", false))
+
+		assert.Nil(t, writer.Flush())
 		assert.Nil(t, err)
-		assert.NotNil(t, actual)
 		if is.index == 0 {
-			assert.Equal(t, cols, actual)
+			assert.Equal(t, strings.Join(cols, " "), w.String())
 		} else {
-			assert.Equal(t, 1, len(actual))
-			assert.Equal(t, cols[is.index-1], actual[0])
+			assert.Equal(t, fmt.Sprintf("%s", cols[is.index-1]), w.String())
 		}
 	}
 }

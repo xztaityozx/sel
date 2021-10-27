@@ -51,7 +51,7 @@ func TestWriter_Write(t *testing.T) {
 				delimiter: tt.fields.delimiter,
 				buf:       tt.fields.buf,
 			}
-			if err := w.Write(tt.args.columns); (err != nil) != tt.wantErr {
+			if err := w.Write(tt.args.columns...); (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			_ = w.buf.Flush()

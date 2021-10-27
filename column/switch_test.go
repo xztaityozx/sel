@@ -1,9 +1,12 @@
 package column
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/iterator"
 	"github.com/xztaityozx/sel/test_util"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -36,19 +39,47 @@ func TestNewSwitchSelector(t *testing.T) {
 	}
 }
 
+type testEnumerable struct {
+	a []string
+}
+
+func (t *testEnumerable) ElementAt(idx int) (string, error) {
+	panic("implement me")
+}
+
+func (t *testEnumerable) Next() (item string, ok bool) {
+	panic("implement me")
+}
+
+func (t *testEnumerable) Last() (item string, ok bool) {
+	panic("implement me")
+}
+
+func (t *testEnumerable) Reset(s string) {
+	panic("implement me")
+}
+
+func (t *testEnumerable) ToArray() []string {
+	return t.a
+}
+
 func TestSwitchSelector_Select(t *testing.T) {
 	type fields struct {
 		begin address
 		end   endAddress
 	}
 	type args struct {
-		strings []string
+		w    *Writer
+		iter iterator.IEnumerable
 	}
 
 	var cols []string
 	for i := 0; i < 20; i++ {
 		cols = append(cols, test_util.RandString(10))
 	}
+
+	var buf []byte
+	w := bytes.NewBuffer(buf)
 
 	tests := []struct {
 		name    string
@@ -63,7 +94,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{num: 1},
 				end:   endAddress{address: address{num: 5}},
 			},
-			args: args{strings: cols},
+			args: args{iter: &testEnumerable{a: cols}, w: NewWriter(" ", w)},
 			want: cols[0:5],
 		},
 		{
@@ -72,7 +103,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`a`)},
 				end:   endAddress{address{regexp: regexp.MustCompile(`e`)}, false},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"a", "b", "c", "d", "e"},
 		},
 		{
@@ -81,7 +112,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`a`)},
 				end:   endAddress{address{num: 5}, true},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"a", "b", "c", "d", "e", "3"},
 		},
 		{
@@ -90,7 +121,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`e`)},
 				end:   endAddress{address{num: -5}, true},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"2", "a", "b", "c", "d", "e"},
 		},
 		{
@@ -99,7 +130,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`a`)},
 				end:   endAddress{address{num: -5}, true},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"1", "2", "a"},
 		},
 		{
@@ -108,7 +139,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`e`)},
 				end:   endAddress{address{num: 5}, true},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"e", "3", "4"},
 		},
 		{
@@ -117,7 +148,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`e`)},
 				end:   endAddress{address{num: 0}, true},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"e"},
 		},
 		{
@@ -126,7 +157,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: address{regexp: regexp.MustCompile(`e`)},
 				end:   endAddress{address{num: 0}, false},
 			},
-			args: args{strings: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}},
+			args: args{iter: &testEnumerable{a: []string{"1", "2", "a", "b", "c", "d", "e", "3", "4"}}, w: NewWriter(" ", w)},
 			want: []string{"e", "3", "4"},
 		},
 	}
@@ -136,12 +167,15 @@ func TestSwitchSelector_Select(t *testing.T) {
 				begin: tt.fields.begin,
 				end:   tt.fields.end,
 			}
-			got, err := s.Select(tt.args.strings)
+			err := s.Select(tt.args.w, tt.args.iter)
+			assert.Nil(t, tt.args.w.Flush())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Select() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, strings.Join(tt.want, " "), w.String())
+
+			w.Reset()
 		})
 	}
 }

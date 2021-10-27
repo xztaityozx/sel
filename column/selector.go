@@ -1,5 +1,7 @@
 package column
 
+import "github.com/xztaityozx/sel/iterator"
+
 type Selector interface {
-	Select([]string) ([]string, error)
+	Select(w *Writer, iterator iterator.IEnumerable) error
 }
