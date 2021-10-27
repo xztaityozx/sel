@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"bufio"
+	"fmt"
+	"github.com/xztaityozx/sel/iterator"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -25,7 +28,7 @@ var rootCmd = &cobra.Command{
 
 __sel__ect column`,
 	Args:    cobra.MinimumNArgs(1),
-	Version: "1.1.1",
+	Version: "1.1.4",
 	Run: func(cmd *cobra.Command, args []string) {
 		opt := option.NewOption(viper.GetViper())
 		selectors, err := parser.Parse(args)
@@ -34,14 +37,34 @@ __sel__ect column`,
 		}
 
 		w := column.NewWriter(opt.OutPutDelimiter, os.Stdout)
-		var splitter column.Splitter
+
+		var iter iterator.IEnumerable
+
+		// これから使うイテレーターを生成
+		// オプションのON/OFFで行の分割戦略を変える
 		if opt.UseRegexp {
-			splitter, err = column.NewSplitterRegexp(opt.InputDelimiter, opt.RemoveEmpty)
+			// Regexpを使う系の分割。遅め
+			r, err := regexp.Compile(opt.InputDelimiter)
 			if err != nil {
 				log.Fatalln(err)
 			}
+
+			if opt.SplitBefore {
+				// 事前に分割する。選択しないカラムも分割するが、後半のカラムを選択するときにはこちらが有利
+				iter = iterator.NewPreSplitByRegexpIterator("", r, opt.RemoveEmpty)
+			} else {
+				// 欲しいところまで分割する。前の方に位置するカラムだけを選ぶ時に有利。
+				// 負のインデックスを指定する場合は全部分割してしまうので不利
+				iter = iterator.NewRegexpIterator("", r, opt.RemoveEmpty)
+			}
 		} else {
-			splitter = column.NewSplitter(opt.InputDelimiter, opt.RemoveEmpty)
+			if opt.SplitBefore {
+				// 事前に分割する。regexp版と説明は同じ
+				iter = iterator.NewPreSplitIterator("", opt.InputDelimiter, opt.RemoveEmpty)
+			} else {
+				// 最速。ただし、シンプルなIndex指定の時だけ
+				iter = iterator.NewIterator("", opt.InputDelimiter, opt.RemoveEmpty)
+			}
 		}
 
 		if len(opt.Files) != 0 {
@@ -54,13 +77,13 @@ __sel__ect column`,
 				if fp, err := os.OpenFile(file, os.O_RDONLY, 0644); err != nil {
 					log.Fatalln(err)
 				} else {
-					if err := run(fp, splitter, w, selectors); err != nil {
+					if err := run(fp, iter, w, selectors); err != nil {
 						log.Fatalln(err)
 					}
 				}
 			}
 		} else {
-			if err := run(os.Stdin, splitter, w, selectors); err != nil {
+			if err := run(os.Stdin, iter, w, selectors); err != nil {
 				log.Fatalln(err)
 			}
 		}
@@ -79,6 +102,7 @@ func init() {
 	rootCmd.Flags().StringP(option.NameOutPutDelimiter, "D", " ", "sets field delimiter(output)")
 	rootCmd.Flags().BoolP(option.NameRemoveEmpty, "r", false, "remove empty sequence")
 	rootCmd.Flags().BoolP(option.NameUseRegexp, "g", false, "use regular expressions for input delimiter")
+	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, fmt.Sprintf("set column split strategy for input line.\npre: split all before select columns\nlazy: split column when selected\n"))
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
 
 	for _, key := range option.GetOptionNames() {
@@ -126,7 +150,7 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `)
 }
 
-func run(input *os.File, splitter column.Splitter, writer *column.Writer, selectors []column.Selector) error {
+func run(input *os.File, iter iterator.IEnumerable, writer *column.Writer, selectors []column.Selector) error {
 	defer func(input *os.File) {
 		err := input.Close()
 		if err != nil {
@@ -136,14 +160,10 @@ func run(input *os.File, splitter column.Splitter, writer *column.Writer, select
 
 	scan := bufio.NewScanner(input)
 	for scan.Scan() {
-		line := splitter.Split(scan.Text())
+		iter.Reset(scan.Text())
 		for _, selector := range selectors {
-			cols, err := selector.Select(line)
+			err := selector.Select(writer, iter)
 			if err != nil {
-				return err
-			}
-
-			if err := writer.Write(cols); err != nil {
 				return err
 			}
 		}
