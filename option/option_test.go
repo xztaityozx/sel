@@ -91,7 +91,7 @@ func TestGetOptionNames(t *testing.T) {
 		name string
 		want []string
 	}{
-		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty}},
+		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty, option.NameSplitBefore}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -120,6 +120,7 @@ func TestNewOption(t *testing.T) {
 					v.Set(option.NameOutPutDelimiter, "o")
 					v.Set(option.NameRemoveEmpty, true)
 					v.Set(option.NameUseRegexp, true)
+					v.Set(option.NameSplitBefore, true)
 					return v
 				}(),
 			},
@@ -130,6 +131,7 @@ func TestNewOption(t *testing.T) {
 					OutPutDelimiter: "o",
 					RemoveEmpty:     true,
 					UseRegexp:       true,
+					SplitBefore:     true,
 				},
 			},
 		},

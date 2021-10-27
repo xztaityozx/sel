@@ -25,6 +25,8 @@ type DelimiterOption struct {
 	RemoveEmpty bool
 	// --use-regexp
 	UseRegexp bool
+	// --split-before
+	SplitBefore bool
 }
 
 // InputFiles is setting for -f, --input-files option
@@ -72,7 +74,15 @@ const (
 	NameOutPutDelimiter = "output-delimiter"
 	NameRemoveEmpty     = "remove-empty"
 	NameUseRegexp       = "use-regexp"
-	NameInputFiles      = "input-files"
+	NameInputFiles  = "input-files"
+	NameSplitBefore = "split-before"
+)
+
+type SplitStrategy int
+
+const (
+	SplitStrategyPreSplit SplitStrategy = iota
+	SplitStrategyLazySplit
 )
 
 func GetOptionNames() []string {
@@ -82,6 +92,7 @@ func GetOptionNames() []string {
 		NameOutPutDelimiter,
 		NameUseRegexp,
 		NameRemoveEmpty,
+		NameSplitBefore,
 	}
 }
 
@@ -93,6 +104,7 @@ func NewOption(v *viper.Viper) Option {
 			OutPutDelimiter: v.GetString(NameOutPutDelimiter),
 			RemoveEmpty:     v.GetBool(NameRemoveEmpty),
 			UseRegexp:       v.GetBool(NameUseRegexp),
+			SplitBefore:     v.GetBool(NameSplitBefore),
 		},
 		InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
 	}
