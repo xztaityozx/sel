@@ -32,6 +32,7 @@ type Iterator struct {
 	tail        int
 	sepLen      int
 	removeEmpty bool
+	a           []string
 }
 
 var IndexOutOfRange = "index out of range"
@@ -45,6 +46,7 @@ func (i *Iterator) Reset(s string) {
 	i.s = s
 	i.head = 0
 	i.tail = 0
+	i.a = nil
 }
 
 //ElementAt は指定したインデックスの値を返す。1-indexed
@@ -152,6 +154,9 @@ func (i *Iterator) Last() (item string, ok bool) {
 }
 
 func (i *Iterator) ToArray() []string {
+	if i.a != nil {
+		return i.a
+	}
 	a := make([]string, i.head)
 	for k := 1; k <= i.head; k++ {
 		a[k-1] = i.buf[k]
@@ -169,6 +174,7 @@ func (i *Iterator) ToArray() []string {
 		a = append(a, i.buf[k])
 	}
 
+	i.a = a
 	return a
 }
 
@@ -187,14 +193,14 @@ func NewIterator(s, sep string, removeEmpty bool) *Iterator {
 }
 
 type RegexpIterator struct {
-	r *strings.Reader
-	sep *regexp.Regexp
-	s string
-	head int
-	tail int
-	buf map[int]string
-	removeEmpty                 bool
-	numberOfNegativeIndexMember int
+	r           *strings.Reader
+	sep         *regexp.Regexp
+	s           string
+	head        int
+	tail        int
+	buf         map[int]string
+	removeEmpty bool
+	a           []string
 }
 
 func (r *RegexpIterator) ElementAt(idx int) (string, error) {
@@ -207,7 +213,8 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			return r.buf[idx], nil
 		}
 
-		for _, ok := r.Next(); ok && r.head <= idx; _, ok = r.Next(){}
+		for _, ok := r.Next(); ok && r.head <= idx; _, ok = r.Next() {
+		}
 
 		if r.head >= idx {
 			return r.buf[idx], nil
@@ -225,6 +232,7 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 		// 負のインデックス指定されたとき
 		// rightmostなIndexの検索ができないので残りの文字列をすべて分割してしまう
 		// パフォーマンス的にネック
+
 		if item, ok := r.buf[idx]; ok {
 			return item, nil
 		}
@@ -244,6 +252,11 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 
 				r.tail--
 				res = append(res, a)
+			}
+
+			if r.s != "" {
+				res = append(res, r.s)
+				r.s = ""
 			}
 
 			for i, v := range res {
@@ -298,16 +311,23 @@ func (r *RegexpIterator) Last() (item string, ok bool) {
 }
 
 func (r *RegexpIterator) ToArray() []string {
-	for _, ok := r.Next(); ok; _, ok = r.Next() {}
+	if r.a != nil {
+		return r.a
+	}
+
+	for _, ok := r.Next(); ok; _, ok = r.Next() {
+	}
 
 	a := make([]string, r.head+(-r.tail))
-	for i:=1;i<=r.head;i++ {
+	for i := 1; i <= r.head; i++ {
 		a[i-1] = r.buf[i]
 	}
 
-	for i:=-1;i>=r.tail;i-- {
+	for i := -1; i >= r.tail; i-- {
 		a[r.head-i+1] = r.buf[i]
 	}
+
+	r.a = a
 
 	return a
 }
@@ -317,18 +337,17 @@ func (r *RegexpIterator) Reset(s string) {
 	r.r.Reset(s)
 	r.head = 0
 	r.tail = 0
+	r.a = nil
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
 	return &RegexpIterator{
-		r:   strings.NewReader(s),
-		sep: sep,
-		s:   s,
-		head: 0,
-		tail: 0,
-		buf: make(map[int]string, 20),
+		r:           strings.NewReader(s),
+		sep:         sep,
+		s:           s,
+		head:        0,
+		tail:        0,
+		buf:         make(map[int]string, 20),
 		removeEmpty: re,
 	}
 }
-
-
