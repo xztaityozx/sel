@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"bufio"
-	"github.com/xztaityozx/sel/iterator"
 	"log"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/xztaityozx/sel/iterator"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -101,7 +102,7 @@ func init() {
 	rootCmd.Flags().StringP(option.NameOutPutDelimiter, "D", " ", "sets field delimiter(output)")
 	rootCmd.Flags().BoolP(option.NameRemoveEmpty, "r", false, "remove empty sequence")
 	rootCmd.Flags().BoolP(option.NameUseRegexp, "g", false, "use regular expressions for input delimiter")
-	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, "set column split strategy for input line.\npre: split all before select columns\nlazy: split column when selected\n")
+	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, "split all column before select")
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
 
 	for _, key := range option.GetOptionNames() {

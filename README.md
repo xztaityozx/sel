@@ -35,8 +35,7 @@ $ sel completion zsh > ${fpath[1]}/_sel
 # Usage
 
 ```
-
-          _ 
+          _
  ___  ___| |
 / __|/ _ \ |
 \__ \  __/ |
@@ -45,23 +44,23 @@ $ sel completion zsh > ${fpath[1]}/_sel
 __sel__ect column
 
 Usage:
-	sel [queries...]
+        sel [queries...]
 
 Query:
-	index                        select 'index'
-	start:stop                   select columns from 'start' to 'stop'
-	start:stop:step              select columns each 'step' from 'start' to 'stop'
+     index                        select 'index'
+     start:stop                   select columns from 'start' to 'stop'
+     start:stop:step              select columns each 'step' from 'start' to 'stop'
 
-	start:/end regexp/           select columns from 'start' to /end regexp/
-	/start regexp/:end           select columns from /start regexp/ to 'end'
-	/start regexp/:/end regexp/  select columns from /start regexp/ to /end regexp/
+     start:/end regexp/           select columns from 'start' to /end regexp/
+     /start regexp/:end           select columns from /start regexp/ to 'end'
+     /start regexp/:/end regexp/  select columns from /start regexp/ to /end regexp/
 
 Examples:
 
-	$ cat /path/to/file | sel 1
-	$ sel 1:10 -f ./file
-	$ cat /path/to/file.csv | sel -d, 1 2 3 4 -1 -2 -3 -4
-	$ sel 2:: -f ./file
+     $ cat /path/to/file | sel 1
+     $ sel 1:10 -f ./file
+     $ cat /path/to/file.csv | sel -d, 1 2 3 4 -1 -2 -3 -4
+     $ sel 2:: -f ./file
 
 Available Commands:
   completion  Generate completion script
@@ -73,10 +72,9 @@ Flags:
   -f, --input-files strings       input files
   -D, --output-delimiter string   sets field delimiter(output) (default " ")
   -r, --remove-empty              remove empty sequence
+  -S, --split-before              split all column before select
   -g, --use-regexp                use regular expressions for input delimiter
   -v, --version                   version for sel
-
-Use "sel [command] --help" for more information about a command.
 ```
 
 # Features
