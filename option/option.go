@@ -74,16 +74,11 @@ const (
 	NameOutPutDelimiter = "output-delimiter"
 	NameRemoveEmpty     = "remove-empty"
 	NameUseRegexp       = "use-regexp"
-	NameInputFiles  = "input-files"
-	NameSplitBefore = "split-before"
+	NameInputFiles      = "input-files"
+	NameSplitBefore     = "split-before"
 )
 
 type SplitStrategy int
-
-const (
-	SplitStrategyPreSplit SplitStrategy = iota
-	SplitStrategyLazySplit
-)
 
 func GetOptionNames() []string {
 	return []string{
