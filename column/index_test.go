@@ -2,7 +2,6 @@ package column
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/xztaityozx/sel/iterator"
 	"github.com/xztaityozx/sel/test_util"
@@ -73,7 +72,7 @@ func TestIndexSelector_Select(t *testing.T) {
 		if is.index == 0 {
 			assert.Equal(t, strings.Join(cols, " "), w.String())
 		} else {
-			assert.Equal(t, fmt.Sprintf("%s", cols[is.index-1]), w.String())
+			assert.Equal(t, cols[is.index-1], w.String())
 		}
 	}
 }
