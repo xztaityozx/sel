@@ -62,6 +62,10 @@ func Parse(args []string) ([]column.Selector, error) {
 				return nil, fmt.Errorf("%s is invalid index query", query)
 			}
 		} else if query.isSwitchQuery() {
+			// sedやawkの2addrみたいなやつ
+			// /regexp/,/regexp/
+			// /regexp/,number
+			// number,/regexp/
 			s := switchQueryValidator.FindAllStringSubmatch(string(query), -1)[0]
 			ss, err := column.NewSwitchSelector(s[1], s[2])
 			if err != nil {

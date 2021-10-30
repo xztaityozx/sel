@@ -22,7 +22,7 @@ func (w *Writer) SetAutoFlush(b bool) {
 	w.autoFlush = b
 }
 
-func (w *Writer) Write(columns []string) error {
+func (w *Writer) Write(columns ...string) error {
 	if len(columns) == 0 {
 		return nil
 	}
@@ -45,6 +45,10 @@ func (w *Writer) Write(columns []string) error {
 			return err
 		}
 	}
+
+	//if _, err := w.buf.WriteString(strings.Join(columns, string(w.delimiter))); err != nil {
+	//	return err
+	//}
 
 	w.writtenColumns += len(columns)
 

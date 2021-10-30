@@ -2,6 +2,7 @@ package column
 
 import (
 	"fmt"
+	"github.com/xztaityozx/sel/iterator"
 	"regexp"
 	"strconv"
 )
@@ -39,7 +40,8 @@ func between(a, max, min int) int {
 	return a
 }
 
-func (s SwitchSelector) Select(strings []string) ([]string, error) {
+func (s SwitchSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+	strings := iter.ToArray()
 	max := len(strings)
 	min := 0
 	var rt []string
@@ -70,7 +72,7 @@ func (s SwitchSelector) Select(strings []string) ([]string, error) {
 		}
 	}
 
-	return rt, nil
+	return w.Write(rt...)
 }
 
 var numberAddress, _ = regexp.Compile(`^\d+$`)
