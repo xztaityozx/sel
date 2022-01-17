@@ -2,13 +2,14 @@ package option_test
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
+
+	"github.com/spf13/viper"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xztaityozx/sel/option"
@@ -91,7 +92,7 @@ func TestGetOptionNames(t *testing.T) {
 		name string
 		want []string
 	}{
-		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty, option.NameSplitBefore}},
+		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty, option.NameSplitBefore, option.NameFieldSplit}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

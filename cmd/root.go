@@ -103,6 +103,7 @@ func init() {
 	rootCmd.Flags().BoolP(option.NameRemoveEmpty, "r", false, "remove empty sequence")
 	rootCmd.Flags().BoolP(option.NameUseRegexp, "g", false, "use regular expressions for input delimiter")
 	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, "split all column before select")
+	rootCmd.Flags().BoolP(option.NameFieldSplit, "a", false, "Shorthand for -gd '\\s+'")
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
 
 	for _, key := range option.GetOptionNames() {

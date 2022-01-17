@@ -2,9 +2,10 @@ package option
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/viper"
 )
 
 // Option is commandline options
@@ -76,6 +77,7 @@ const (
 	NameUseRegexp       = "use-regexp"
 	NameInputFiles      = "input-files"
 	NameSplitBefore     = "split-before"
+	NameFieldSplit      = "field-split"
 )
 
 type SplitStrategy int
@@ -88,11 +90,26 @@ func GetOptionNames() []string {
 		NameUseRegexp,
 		NameRemoveEmpty,
 		NameSplitBefore,
+		NameFieldSplit,
 	}
 }
 
 // NewOption は viper.Viper からフラグの値を取り出して Option を作って返す
 func NewOption(v *viper.Viper) Option {
+
+	if v.GetBool(NameFieldSplit) {
+		return Option{
+			DelimiterOption: DelimiterOption{
+				InputDelimiter:  `\s+`,
+				OutPutDelimiter: v.GetString(NameOutPutDelimiter),
+				RemoveEmpty:     v.GetBool(NameRemoveEmpty),
+				UseRegexp:       true,
+				SplitBefore:     v.GetBool(NameSplitBefore),
+			},
+			InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
+		}
+	}
+
 	return Option{
 		DelimiterOption: DelimiterOption{
 			InputDelimiter:  v.GetString(NameInputDelimiter),
