@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 
 __sel__ect column`,
 	Args:    cobra.MinimumNArgs(1),
-	Version: "1.1.4",
+	Version: "1.1.5",
 	Run: func(cmd *cobra.Command, args []string) {
 		opt := option.NewOption(viper.GetViper())
 		selectors, err := parser.Parse(args)
@@ -103,6 +103,7 @@ func init() {
 	rootCmd.Flags().BoolP(option.NameRemoveEmpty, "r", false, "remove empty sequence")
 	rootCmd.Flags().BoolP(option.NameUseRegexp, "g", false, "use regular expressions for input delimiter")
 	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, "split all column before select")
+	rootCmd.Flags().BoolP(option.NameFieldSplit, "a", false, "Shorthand for -gd '\\s+'")
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
 
 	for _, key := range option.GetOptionNames() {
