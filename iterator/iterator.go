@@ -26,7 +26,7 @@ func removeEmpty(s []string) []string {
 
 // Iterator は特定の文字で分割するイテレーター
 type Iterator struct {
-	// 切り出し結果を保持しておく。[]stringでもいいが、appendのコストが気になるため…。
+	// 切り出し結果を保持しておくmap
 	buf map[int]string
 	// 区切り文字
 	sep string
