@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 
 __sel__ect column`,
 	Args:    cobra.MinimumNArgs(1),
-	Version: "1.1.6",
+	Version: "1.1.7",
 	Run: func(cmd *cobra.Command, args []string) {
 		opt := option.NewOption(viper.GetViper())
 		selectors, err := parser.Parse(args)
