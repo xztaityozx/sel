@@ -50,7 +50,7 @@ func (i *Iterator) String() string {
 	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\thead: %d,\n\ttail: %d\n\ts: '%s',\n\tbuf: %v\n}", i.sep, i.sepLen, i.head, i.tail, i.s, i.buf)
 }
 
-//Reset はこのイテレーターをリセットする
+// Reset はこのイテレーターをリセットする
 func (i *Iterator) Reset(s string) {
 	i.s = s
 	i.head = 0
@@ -58,7 +58,7 @@ func (i *Iterator) Reset(s string) {
 	i.a = nil
 }
 
-//ElementAt は指定したインデックスの値を返す。1-indexed
+// ElementAt は指定したインデックスの値を返す。1-indexed
 func (i *Iterator) ElementAt(idx int) (string, error) {
 	if idx == 0 {
 		return "", fmt.Errorf(IndexOutOfRange)
@@ -105,7 +105,7 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 	}
 }
 
-//Next は先頭から次の要素を取り出す
+// Next は先頭から次の要素を取り出す
 func (i *Iterator) Next() (item string, ok bool) {
 	s := i.s
 
@@ -134,7 +134,7 @@ func (i *Iterator) Next() (item string, ok bool) {
 	return a, true
 }
 
-//Last は末尾から要素を取り出す
+// Last は末尾から要素を取り出す
 func (i *Iterator) Last() (item string, ok bool) {
 	s := i.s
 
@@ -213,7 +213,7 @@ type RegexpIterator struct {
 	head int
 	// 切り出した末尾
 	tail int
-	// 切り出し結果を保持しておく。[]stringでもいいが、appendのコストが気になるため…。
+	// 切り出し結果を保持しておくmap
 	buf map[int]string
 	// 長さ0の文字列を要素に含めるかどうか
 	removeEmpty bool
