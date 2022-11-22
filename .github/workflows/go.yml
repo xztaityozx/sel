@@ -46,7 +46,7 @@ jobs:
       - name: Setup GoLang
         uses: actions/setup-go@v3
         with:
-          go-version: ^1.18
+          go-version: ^1.19
       - name: Get Dependencies
         if: steps.cache-go.outputs.cache-hit != 'true'
         run: go get -v -t -d ./...
@@ -64,14 +64,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: setup var
-        id: vars
-        run: |
-          echo ::set-output name=GO_VERSION::"$(cat .go-version)"
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{steps.vars.outputs.GO_VERSION}}
+          go-version: ^1.19
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
