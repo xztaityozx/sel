@@ -250,9 +250,8 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 		// 負のインデックス指定されたとき
 		// rightmostなIndexの検索ができないので残りの文字列をすべて分割してしまう
 		// パフォーマンス的にネック
-
-		if item, ok := r.buf[idx]; ok {
-			return item, nil
+		if r.tail <= idx {
+			return r.buf[idx], nil
 		}
 
 		if r.s != "" {
@@ -356,7 +355,6 @@ func (r *RegexpIterator) Reset(s string) {
 	r.head = 0
 	r.tail = 0
 	r.a = nil
-	r.buf = make(map[int]string, 20)
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
