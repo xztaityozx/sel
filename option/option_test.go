@@ -2,7 +2,6 @@ package option_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -46,7 +45,7 @@ func TestInputFiles_Enumerate(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			f := filepath.Join(base, fmt.Sprint(i))
 			files = append(files, f)
-			_ = ioutil.WriteFile(f, []byte("はい"), 0644)
+			_ = os.WriteFile(f, []byte("はい"), 0644)
 		}
 
 		a, err := option.InputFiles{Files: files}.Enumerate()
