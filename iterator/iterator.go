@@ -24,15 +24,24 @@ func removeEmpty(s []string) []string {
 	return a
 }
 
+// Iterator は特定の文字で分割するイテレーター
 type Iterator struct {
-	buf         map[int]string
-	sep         string
-	s           string
-	head        int
-	tail        int
-	sepLen      int
+	// 切り出し結果を保持しておく。[]stringでもいいが、appendのコストが気になるため…。
+	buf map[int]string
+	// 区切り文字
+	sep string
+	// オリジナル文字列
+	s string
+	// 現在の切り出し先頭位置
+	head int
+	// 現在の切り出し末尾位置
+	tail int
+	// 区切り文字列の長さ
+	sepLen int
+	// 長さ0な文字列を要素に含めるかどうか
 	removeEmpty bool
-	a           []string
+	// 最終的な分割結果。ToArray したときだけ書かれる
+	a []string
 }
 
 var IndexOutOfRange = "index out of range"
@@ -192,15 +201,24 @@ func NewIterator(s, sep string, removeEmpty bool) *Iterator {
 	}
 }
 
+// RegexpIterator は正規表現でテキストを分割するイテレーター
 type RegexpIterator struct {
-	r           *strings.Reader
-	sep         *regexp.Regexp
-	s           string
-	head        int
-	tail        int
-	buf         map[int]string
+	// 入力ソース
+	r *strings.Reader
+	// 区切りとなる正規表現
+	sep *regexp.Regexp
+	// オリジナルの文字列
+	s string
+	// 切り出した先頭
+	head int
+	// 切り出した末尾
+	tail int
+	// 切り出し結果を保持しておく。[]stringでもいいが、appendのコストが気になるため…。
+	buf map[int]string
+	// 長さ0の文字列を要素に含めるかどうか
 	removeEmpty bool
-	a           []string
+	// 最終的な分割結果。ToArray したときだけ書かれる
+	a []string
 }
 
 func (r *RegexpIterator) ElementAt(idx int) (string, error) {
