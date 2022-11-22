@@ -356,6 +356,7 @@ func (r *RegexpIterator) Reset(s string) {
 	r.head = 0
 	r.tail = 0
 	r.a = nil
+	r.buf = make(map[int]string, 20)
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
