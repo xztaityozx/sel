@@ -2,9 +2,10 @@ package column
 
 import (
 	"fmt"
-	"github.com/xztaityozx/sel/iterator"
 	"regexp"
 	"strconv"
+
+	"github.com/xztaityozx/sel/iterator"
 )
 
 type address struct {
@@ -20,16 +21,21 @@ func (a address) match(s string, index int) bool {
 	}
 }
 
+// endAddress は終了アドレスを表す。終了アドレスとして+Nや-Nを指定すると、前後N個といった指定ができる
 type endAddress struct {
 	address
+	// +N / -N といった前後を参考にするかどうか
 	isAroundContext bool
 }
 
+// SwitchSelector はsedやawkにある2addrと同じ書き味でカラムを選択するやつ
 type SwitchSelector struct {
 	begin address
 	end   endAddress
 }
 
+// between は a を丸める
+// バグってるような気がしないでもない
 func between(a, max, min int) int {
 	if a < min {
 		return 0
@@ -40,7 +46,9 @@ func between(a, max, min int) int {
 	return a
 }
 
+// Select はクエリに従ってカラムを選択する
 func (s SwitchSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+	// isAroundContextなときは、配列の最大長が必要になるので、最初に全部分割してしまう
 	strings := iter.ToArray()
 	max := len(strings)
 	min := 0
@@ -48,6 +56,7 @@ func (s SwitchSelector) Select(w *Writer, iter iterator.IEnumerable) error {
 	if s.end.isAroundContext {
 		for i, v := range strings {
 			if s.begin.match(v, i) {
+				// マッチした位置から前後どちらかにs.end.num個
 				if s.end.num < 0 {
 					rt = append(rt, strings[between(i+s.end.num, max, min):between(i+1, max, min)]...)
 				} else {
@@ -56,6 +65,8 @@ func (s SwitchSelector) Select(w *Writer, iter iterator.IEnumerable) error {
 			}
 		}
 	} else {
+		// isAroundContextじゃないときはクエリにマッチしたとき出力するかどうかを切り替える
+		// s.begin.match()でON、s.end.match()でOFFが切り替わる
 		st := false
 		for i, v := range strings {
 			if st {
@@ -80,6 +91,7 @@ var regexpAddress, _ = regexp.Compile(`^/.+/$`)
 var aroundContextAddress, _ = regexp.Compile(`^[+-]\d+$`)
 
 func newAddress(q string) (address, error) {
+	// 数値ならIndexの指定、そうでないなら正規表現としてコンパイルする
 	if numberAddress.MatchString(q) {
 		num, err := strconv.Atoi(q)
 		return address{
@@ -96,6 +108,8 @@ func newAddress(q string) (address, error) {
 }
 
 func newEndAddress(q string) (endAddress, error) {
+	// isAroundContextなクエリかどうかを最初に見る。条件としては+か-で始まる数値
+	// そうでないならaddressとして解釈
 	if aroundContextAddress.MatchString(q) {
 		num, err := strconv.Atoi(q)
 		return endAddress{
