@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/csv"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -28,7 +30,7 @@ var rootCmd = &cobra.Command{
 
 __sel__ect column`,
 	Args:    cobra.MinimumNArgs(1),
-	Version: "1.1.7",
+	Version: "1.1.8",
 	Run: func(cmd *cobra.Command, args []string) {
 		opt := option.NewOption(viper.GetViper())
 		selectors, err := parser.Parse(args)
@@ -77,14 +79,29 @@ __sel__ect column`,
 				if fp, err := os.OpenFile(file, os.O_RDONLY, 0644); err != nil {
 					log.Fatalln(err)
 				} else {
-					if err := run(fp, iter, w, selectors); err != nil {
-						log.Fatalln(err)
+					var runError error
+					if ok, comma := opt.IsXsv(); ok {
+            // CSVとかTSVの場合はencoding/csvが分割してくれるので、PreSplitIteratorでよい
+						runError = runForXsv(fp, comma, *iterator.NewPreSplitIterator("", "", opt.RemoveEmpty), w, selectors)
+					} else {
+						runError = run(fp, iter, w, selectors)
+					}
+
+					if runError != nil {
+						log.Fatalln(runError)
 					}
 				}
 			}
 		} else {
-			if err := run(os.Stdin, iter, w, selectors); err != nil {
-				log.Fatalln(err)
+			var runError error
+			if ok, comma := opt.IsXsv(); ok {
+				runError = runForXsv(os.Stdin, comma, *iterator.NewPreSplitIterator("", "", opt.RemoveEmpty), w, selectors)
+			} else {
+				runError = run(os.Stdin, iter, w, selectors)
+			}
+
+			if runError != nil {
+				log.Fatalln(runError)
 			}
 		}
 	},
@@ -103,8 +120,11 @@ func init() {
 	rootCmd.Flags().BoolP(option.NameRemoveEmpty, "r", false, "remove empty sequence")
 	rootCmd.Flags().BoolP(option.NameUseRegexp, "g", false, "use regular expressions for input delimiter")
 	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, "split all column before select")
-	rootCmd.Flags().BoolP(option.NameFieldSplit, "a", false, "Shorthand for -gd '\\s+'")
+	rootCmd.Flags().BoolP(option.NameFieldSplit, "a", false, "shorthand for -gd '\\s+'")
+	rootCmd.Flags().Bool(option.NameCsv, false, "parse input file as CSV")
+	rootCmd.Flags().Bool(option.NameTsv, false, "parse input file as TSV")
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
+	rootCmd.MarkFlagsMutuallyExclusive(option.NameCsv, option.NameTsv)
 
 	for _, key := range option.GetOptionNames() {
 		_ = viper.BindPFlag(key, rootCmd.Flags().Lookup(key))
@@ -176,3 +196,44 @@ func run(input *os.File, iter iterator.IEnumerable, writer *column.Writer, selec
 
 	return writer.Flush()
 }
+
+func runForXsv(input *os.File, comma rune, iter iterator.PreSplitIterator, w *column.Writer, selectors []column.Selector) error {
+	defer func(input *os.File) {
+		err := input.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}(input)
+
+	r := csv.NewReader(input)
+	r.Comma = comma
+
+	var record []string
+	var err error
+	for {
+		record, err = r.Read()
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		iter.ResetFromArray(record)
+
+		for _, selector := range selectors {
+			err := selector.Select(w, &iter)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := w.WriteNewLine(); err != nil {
+			return err
+		}
+	}
+
+	return w.Flush()
+}
+
