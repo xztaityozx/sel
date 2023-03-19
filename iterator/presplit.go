@@ -65,13 +65,17 @@ func (p *PreSplitIterator) ToArray() []string {
 
 func (p *PreSplitIterator) Reset(s string) {
 	if p.reg == nil {
-		p.a = strings.Split(s, p.sep)
+		p.ResetFromArray(strings.Split(s, p.sep))
 	} else {
-		p.a = p.reg.Split(s, -1)
+		p.ResetFromArray(p.reg.Split(s, -1))
 	}
+}
 
+func (p *PreSplitIterator) ResetFromArray(a []string) {
 	if p.removeEmpty {
-		p.a = removeEmpty(p.a)
+		p.a = removeEmpty(a)
+	} else {
+		p.a = a
 	}
 
 	p.tail = 0
