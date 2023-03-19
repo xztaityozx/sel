@@ -14,6 +14,8 @@ type Option struct {
 	DelimiterOption
 	// -f, --input-files option
 	InputFiles
+	// XSV support
+	Xsv
 }
 
 // DelimiterOption is setting for --input/output-delimiter option
@@ -78,6 +80,8 @@ const (
 	NameInputFiles      = "input-files"
 	NameSplitBefore     = "split-before"
 	NameFieldSplit      = "field-split"
+	NameCsv             = "csv"
+	NameTsv             = "tsv"
 )
 
 type SplitStrategy int
@@ -91,6 +95,24 @@ func GetOptionNames() []string {
 		NameRemoveEmpty,
 		NameSplitBefore,
 		NameFieldSplit,
+		NameCsv,
+		NameTsv,
+	}
+}
+
+// Xsv is option group for xsv support
+type Xsv struct {
+	Csv bool
+	Tsv bool
+}
+
+func (x Xsv) IsXsv() (bool, rune) {
+	if x.Csv {
+		return true, ','
+	} else if x.Tsv {
+		return true, '\t'
+	} else {
+		return false, ','
 	}
 }
 
@@ -107,6 +129,10 @@ func NewOption(v *viper.Viper) Option {
 				SplitBefore:     v.GetBool(NameSplitBefore),
 			},
 			InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
+			Xsv: Xsv{
+				Csv: v.GetBool(NameCsv),
+				Tsv: v.GetBool(NameTsv),
+			},
 		}
 	}
 
@@ -119,5 +145,9 @@ func NewOption(v *viper.Viper) Option {
 			SplitBefore:     v.GetBool(NameSplitBefore),
 		},
 		InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
+		Xsv: Xsv{
+			Csv: v.GetBool(NameCsv),
+			Tsv: v.GetBool(NameTsv),
+		},
 	}
 }

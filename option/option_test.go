@@ -91,7 +91,7 @@ func TestGetOptionNames(t *testing.T) {
 		name string
 		want []string
 	}{
-		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty, option.NameSplitBefore, option.NameFieldSplit}},
+		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty, option.NameSplitBefore, option.NameFieldSplit, option.NameCsv, option.NameTsv}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -141,6 +141,38 @@ func TestNewOption(t *testing.T) {
 			if got := option.NewOption(tt.args.v); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewOption() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestXsv_IsXsv(t *testing.T) {
+	as := assert.New(t)
+	type fields struct {
+		csv bool
+		tsv bool
+	}
+
+	type wants struct {
+		ok    bool
+		comma rune
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		wants  wants
+	}{
+		{"CSV", fields{true, false}, wants{true, ','}},
+		{"TSV", fields{false, true}, wants{true, '\t'}},
+		{"CSV && TSV to be CSV", fields{true, true}, wants{true, ','}},
+		{"not XSV", fields{false, false}, wants{false, ','}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOk, gotComma := option.Xsv{Csv: tt.fields.csv, Tsv: tt.fields.tsv}.IsXsv()
+			as.Equal(tt.wants.ok, gotOk)
+			as.Equal(tt.wants.comma, gotComma)
 		})
 	}
 }
