@@ -43,6 +43,10 @@ type testEnumerable struct {
 	a []string
 }
 
+func (t *testEnumerable) ResetFromArray(a []string) {
+  panic("implement me")
+}
+
 func (t *testEnumerable) ElementAt(idx int) (string, error) {
 	panic("implement me")
 }

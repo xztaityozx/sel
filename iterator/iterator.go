@@ -14,6 +14,7 @@ type IEnumerable interface {
 	Last() (item string, ok bool)
 	ToArray() []string
 	Reset(s string)
+	ResetFromArray(a []string)
 }
 
 // NewIEnumerable は option.Option から適切な IEnumerable を生成して返す
@@ -221,6 +222,10 @@ func (i *Iterator) ToArray() []string {
 	return a
 }
 
+func (i *Iterator) ResetFromArray(a []string) {
+	panic("not impl")
+}
+
 func NewIterator(s, sep string, removeEmpty bool) *Iterator {
 	buf := make(map[int]string, 20)
 	buf[0] = s
@@ -389,6 +394,10 @@ func (r *RegexpIterator) Reset(s string) {
 	r.head = 0
 	r.tail = 0
 	r.a = nil
+}
+
+func (r *RegexpIterator) ResetFromArray(a []string) {
+	panic("not impl")
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
