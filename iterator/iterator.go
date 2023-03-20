@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/xztaityozx/sel/option"
 )
 
 type IEnumerable interface {
@@ -12,6 +14,39 @@ type IEnumerable interface {
 	Last() (item string, ok bool)
 	ToArray() []string
 	Reset(s string)
+	ResetFromArray(a []string)
+}
+
+// NewIEnumerable は option.Option から適切な IEnumerable を生成して返す
+func NewIEnumerable(option option.Option) (IEnumerable, error) {
+
+	if ok, comma := option.IsXsv(); ok {
+		// CSV/TSVの時はencoding/csvが分割をしてくれるので、NewPreSplitIteratorを使えばよい
+		return NewPreSplitIterator("", string(comma), option.RemoveEmpty), nil
+	}
+
+	if option.UseRegexp {
+		r, err := regexp.Compile(option.InputDelimiter)
+		if err != nil {
+			return nil, err
+		}
+
+		if option.SplitBefore {
+			// 事前に分割する。選択しないカラムも分割するが、後半のカラムを選択するときにはこちらが有利
+			return NewPreSplitByRegexpIterator("", r, option.RemoveEmpty), nil
+		} else {
+			// 欲しいところまでの分割を都度行う。前の方にあるindexを選ぶほど有利
+			// 負のindexを指定する場合は、末尾まで分割してから返すような実装なので、実行速度が低下してしまうことに注意
+			// もしかしたら肯定先読みとか使えば後ろからsplitできたりする？
+			return NewRegexpIterator("", r, option.RemoveEmpty), nil
+		}
+	} else {
+		if option.SplitBefore {
+			return NewPreSplitIterator("", option.InputDelimiter, option.RemoveEmpty), nil
+		} else {
+			return NewIterator("", option.InputDelimiter, option.RemoveEmpty), nil
+		}
+	}
 }
 
 func removeEmpty(s []string) []string {
@@ -187,6 +222,10 @@ func (i *Iterator) ToArray() []string {
 	return a
 }
 
+func (i *Iterator) ResetFromArray(a []string) {
+	panic("not impl")
+}
+
 func NewIterator(s, sep string, removeEmpty bool) *Iterator {
 	buf := make(map[int]string, 20)
 	buf[0] = s
@@ -355,6 +394,10 @@ func (r *RegexpIterator) Reset(s string) {
 	r.head = 0
 	r.tail = 0
 	r.a = nil
+}
+
+func (r *RegexpIterator) ResetFromArray(a []string) {
+	panic("not impl")
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
