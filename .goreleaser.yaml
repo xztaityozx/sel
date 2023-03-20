@@ -13,8 +13,12 @@ builds:
       - linux
       - windows
       - darwin
+    ldflags:
+      - -s -w -X github.com/xztaityozx/sel/cmd.Version={{ .Version }}
 archives:
-  - replacements:
+  - id: archive
+    name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}_{{ .Version }}'
+    replacements:
       darwin: Darwin
       linux: Linux
       windows: Windows
@@ -25,8 +29,10 @@ checksum:
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 changelog:
+  use: github
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+      - 'typo'
