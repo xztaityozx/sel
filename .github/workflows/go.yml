@@ -2,9 +2,6 @@ name: Go
 
 on: 
   push:
-    paths: 
-      - '**.go'
-      - '.github/workflows/**'
     tags:
       - 'v*'
   pull_request:
