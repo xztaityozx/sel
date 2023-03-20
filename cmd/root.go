@@ -41,11 +41,6 @@ __sel__ect column`,
 
 		w := column.NewWriter(opt.OutPutDelimiter, os.Stdout)
 
-		iter, err := iterator.NewIEnumerable(opt)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
 		if len(opt.Files) != 0 {
 			files, err := opt.InputFiles.Enumerate()
 			if err != nil {
@@ -53,32 +48,17 @@ __sel__ect column`,
 			}
 
 			for _, file := range files {
-				if fp, err := os.OpenFile(file, os.O_RDONLY, 0644); err != nil {
+				if fp, err := os.Open(file); err != nil {
 					log.Fatalln(err)
 				} else {
-					var runError error
-					if ok, comma := opt.IsXsv(); ok {
-						// CSVとかTSVの場合はencoding/csvが分割してくれるので、PreSplitIteratorでよい
-						runError = runForXsv(fp, comma, *iterator.NewPreSplitIterator("", "", opt.RemoveEmpty), w, selectors)
-					} else {
-						runError = run(fp, iter, w, selectors)
-					}
-
-					if runError != nil {
-						log.Fatalln(runError)
+					if err := run(fp, opt, w, selectors); err != nil {
+						log.Fatalln(err)
 					}
 				}
 			}
 		} else {
-			var runError error
-			if ok, comma := opt.IsXsv(); ok {
-				runError = runForXsv(os.Stdin, comma, *iterator.NewPreSplitIterator("", "", opt.RemoveEmpty), w, selectors)
-			} else {
-				runError = run(os.Stdin, iter, w, selectors)
-			}
-
-			if runError != nil {
-				log.Fatalln(runError)
+			if err := run(os.Stdin, opt, w, selectors); err != nil {
+				log.Fatalln(err)
 			}
 		}
 	},
@@ -111,7 +91,7 @@ func init() {
 		"",
 		"$ cat /path/to/file | sel 1",
 		"$ sel 1:10 -f ./file",
-		"$ cat /path/to/file.csv | sel -d, 1 2 3 4 -1 -2 -3 -4",
+		"$ cat /path/to/file.csv | sel -d, 1 2 3 4 -- -1 -2 -3 -4",
 		"$ sel 2:: -f ./file",
 	}
 
@@ -148,68 +128,61 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `)
 }
 
-func run(input *os.File, iter iterator.IEnumerable, writer *column.Writer, selectors []column.Selector) error {
+// run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
+func run(input *os.File, option option.Option, w *column.Writer, selectors []column.Selector) error {
 	defer func(input *os.File) {
-		err := input.Close()
-		if err != nil {
+		if err := input.Close(); err != nil {
 			log.Fatalln(err)
 		}
 	}(input)
+
+	iter, err := iterator.NewIEnumerable(option)
+	if err != nil {
+		return err
+	}
+
+	if ok, comma := option.IsXsv(); ok {
+		r := csv.NewReader(input)
+		r.Comma = comma
+
+		var record []string
+		var csvReadError error
+		for {
+			record, csvReadError = r.Read()
+			if csvReadError != nil && csvReadError != io.EOF {
+				return csvReadError
+			}
+			if csvReadError == io.EOF {
+				break
+			}
+
+			iter.ResetFromArray(record)
+
+			if err := selectAll(&iter, w, selectors); err != nil {
+				return err
+			}
+		}
+
+		return w.Flush()
+	}
 
 	scan := bufio.NewScanner(input)
 	for scan.Scan() {
 		iter.Reset(scan.Text())
-		for _, selector := range selectors {
-			err := selector.Select(writer, iter)
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := writer.WriteNewLine(); err != nil {
-			return err
-		}
-	}
-
-	return writer.Flush()
-}
-
-func runForXsv(input *os.File, comma rune, iter iterator.PreSplitIterator, w *column.Writer, selectors []column.Selector) error {
-	defer func(input *os.File) {
-		err := input.Close()
-		if err != nil {
-			log.Fatalln(err)
-		}
-	}(input)
-
-	r := csv.NewReader(input)
-	r.Comma = comma
-
-	var record []string
-	var err error
-	for {
-		record, err = r.Read()
-
-		if err == io.EOF {
-			break
-		}
-		if err != nil && err != io.EOF {
-			return err
-		}
-
-		iter.ResetFromArray(record)
-
-		for _, selector := range selectors {
-			err := selector.Select(w, &iter)
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := w.WriteNewLine(); err != nil {
+		if err := selectAll(&iter, w, selectors); err != nil {
 			return err
 		}
 	}
 
 	return w.Flush()
+}
+
+func selectAll(iter *iterator.IEnumerable, w *column.Writer, selectors []column.Selector) error {
+	for _, selector := range selectors {
+		err := selector.Select(w, *iter)
+		if err != nil {
+			return err
+		}
+	}
+	return w.WriteNewLine()
 }
