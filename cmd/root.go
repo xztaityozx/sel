@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/xztaityozx/sel/iterator"
@@ -42,33 +41,9 @@ __sel__ect column`,
 
 		w := column.NewWriter(opt.OutPutDelimiter, os.Stdout)
 
-		var iter iterator.IEnumerable
-
-		// これから使うイテレーターを生成
-		// オプションのON/OFFで行の分割戦略を変える
-		if opt.UseRegexp {
-			// Regexpを使う系の分割。遅め
-			r, err := regexp.Compile(opt.InputDelimiter)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			if opt.SplitBefore {
-				// 事前に分割する。選択しないカラムも分割するが、後半のカラムを選択するときにはこちらが有利
-				iter = iterator.NewPreSplitByRegexpIterator("", r, opt.RemoveEmpty)
-			} else {
-				// 欲しいところまで分割する。前の方に位置するカラムだけを選ぶ時に有利。
-				// 負のインデックスを指定する場合は全部分割してしまうので不利
-				iter = iterator.NewRegexpIterator("", r, opt.RemoveEmpty)
-			}
-		} else {
-			if opt.SplitBefore {
-				// 事前に分割する。regexp版と説明は同じ
-				iter = iterator.NewPreSplitIterator("", opt.InputDelimiter, opt.RemoveEmpty)
-			} else {
-				// 最速。ただし、シンプルなIndex指定の時だけ
-				iter = iterator.NewIterator("", opt.InputDelimiter, opt.RemoveEmpty)
-			}
+		iter, err := iterator.NewIEnumerable(opt)
+		if err != nil {
+			log.Fatalln(err)
 		}
 
 		if len(opt.Files) != 0 {
@@ -83,7 +58,7 @@ __sel__ect column`,
 				} else {
 					var runError error
 					if ok, comma := opt.IsXsv(); ok {
-            // CSVとかTSVの場合はencoding/csvが分割してくれるので、PreSplitIteratorでよい
+						// CSVとかTSVの場合はencoding/csvが分割してくれるので、PreSplitIteratorでよい
 						runError = runForXsv(fp, comma, *iterator.NewPreSplitIterator("", "", opt.RemoveEmpty), w, selectors)
 					} else {
 						runError = run(fp, iter, w, selectors)
@@ -238,4 +213,3 @@ func runForXsv(input *os.File, comma rune, iter iterator.PreSplitIterator, w *co
 
 	return w.Flush()
 }
-

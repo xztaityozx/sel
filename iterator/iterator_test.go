@@ -1,11 +1,13 @@
 package iterator
 
 import (
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/option"
 )
 
 func TestNewIterator(t *testing.T) {
@@ -580,4 +582,113 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewIEnumerable(t *testing.T) {
+  as := assert.New(t)
+	type args struct {
+		option option.Option
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wants   IEnumerable
+		wantErr bool
+	}{
+		{
+			"to be Iterator",
+			args{
+				option.Option{
+					DelimiterOption: option.DelimiterOption{
+						SplitBefore: false,
+					},
+				},
+      }, 
+      NewIterator("", "", false),
+			false,
+		},
+    {
+      "to be PreSplitIterator",
+      args {
+        option.Option{
+          DelimiterOption: option.DelimiterOption{
+            SplitBefore: true,
+          },
+        },
+      },
+      NewPreSplitIterator("", "", false),
+      false,
+    },
+    {
+      "to be PreSplitIterator for CSV",
+      args {
+        option.Option{
+          Xsv: option.Xsv{Csv: true, Tsv: false},
+        },
+      },
+      NewPreSplitIterator("", ",", false),
+      false,
+    },
+    {
+      "to be PreSplitIterator for Tsv",
+      args {
+        option.Option{
+          Xsv: option.Xsv{Csv: false, Tsv: true},
+        },
+      },
+      NewPreSplitIterator("", "\t", false),
+      false,
+    },
+    {
+      "to be PreSplitIterator use regexp",
+      args {
+        option.Option{
+          DelimiterOption: option.DelimiterOption{
+            UseRegexp: true,
+            InputDelimiter: "a",
+            SplitBefore: true,
+          },
+        },
+      },
+      NewPreSplitByRegexpIterator("", regexp.MustCompile("a"), false),
+      false,
+    },
+    {
+      "to be RegexpIterator use regexp",
+      args {
+        option.Option{
+          DelimiterOption: option.DelimiterOption{
+            UseRegexp: true,
+            InputDelimiter: "a",
+          },
+        },
+      },
+      NewRegexpIterator("", regexp.MustCompile("a"), false),
+      false,
+    },
+    {
+      "fail on regexp is not invalid",
+      args {
+        option.Option{
+          DelimiterOption: option.DelimiterOption{
+            UseRegexp: true,
+            InputDelimiter: "(", // invalid regexp
+          },
+        },
+      },
+      nil,
+      true,
+    },
+	}
+
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      got, err := NewIEnumerable(tt.args.option)
+      if tt.wantErr {
+        as.Error(err)
+      } else {
+        as.Equal(got, tt.wants)
+      }
+    })
+  }
 }
