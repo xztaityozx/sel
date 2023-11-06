@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/src/option"
+	"github.com/xztaityozx/sel/option"
 )
 
 func TestNewIterator(t *testing.T) {

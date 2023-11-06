@@ -8,13 +8,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xztaityozx/sel/src/iterator"
+	"github.com/xztaityozx/sel/iterator"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/xztaityozx/sel/src/column"
-	"github.com/xztaityozx/sel/src/option"
-	"github.com/xztaityozx/sel/src/parser"
+	"github.com/xztaityozx/sel/column"
+	"github.com/xztaityozx/sel/option"
+	"github.com/xztaityozx/sel/parser"
 )
 
 var Version string = "undefined"

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/xztaityozx/sel/src/option"
+	"github.com/xztaityozx/sel/option"
 )
 
 type IEnumerable interface {
@@ -222,7 +222,7 @@ func (i *Iterator) ToArray() []string {
 	return a
 }
 
-func (i *Iterator) ResetFromArray(_ []string) {
+func (i *Iterator) ResetFromArray(a []string) {
 	panic("not impl")
 }
 
@@ -396,7 +396,7 @@ func (r *RegexpIterator) Reset(s string) {
 	r.a = nil
 }
 
-func (r *RegexpIterator) ResetFromArray(_ []string) {
+func (r *RegexpIterator) ResetFromArray(a []string) {
 	panic("not impl")
 }
 

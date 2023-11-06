@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewRangeSelector(t *testing.T) {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
+	rand.Seed(time.Now().UnixNano())
 	start := rand.Int()
 	step := rand.Int()
 	stop := rand.Int()
@@ -63,7 +63,7 @@ func TestRangeSelector_Select(t *testing.T) {
 			err := rs.Select(writer, &testEnumerable{a: cols})
 			assert.Nil(t, writer.Flush())
 			assert.Nil(t, err)
-			assert.Equal(t, strings.Join(expect, " "), w.String(), "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
+			assert.Equal(t, strings.Join(expect, " "), w.String() , "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
 			w.Reset()
 		}
 	})

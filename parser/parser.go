@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"github.com/xztaityozx/sel/src/column"
+	"github.com/xztaityozx/sel/column"
 	"strconv"
 	"strings"
 )
