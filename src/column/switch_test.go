@@ -3,7 +3,7 @@ package column
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/iterator"
+	"github.com/xztaityozx/sel/src/iterator"
 	"github.com/xztaityozx/sel/test_util"
 	"regexp"
 	"strings"
@@ -43,11 +43,11 @@ type testEnumerable struct {
 	a []string
 }
 
-func (t *testEnumerable) ResetFromArray(a []string) {
-  panic("implement me")
+func (t *testEnumerable) ResetFromArray(_ []string) {
+	panic("implement me")
 }
 
-func (t *testEnumerable) ElementAt(idx int) (string, error) {
+func (t *testEnumerable) ElementAt(_ int) (string, error) {
 	panic("implement me")
 }
 
@@ -59,7 +59,7 @@ func (t *testEnumerable) Last() (item string, ok bool) {
 	panic("implement me")
 }
 
-func (t *testEnumerable) Reset(s string) {
+func (t *testEnumerable) Reset(_ string) {
 	panic("implement me")
 }
 

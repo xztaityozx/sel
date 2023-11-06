@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/option"
+	"github.com/xztaityozx/sel/src/option"
 )
 
 func TestInputFiles_Enumerate(t *testing.T) {
@@ -65,7 +65,8 @@ func TestInputFiles_Enumerate(t *testing.T) {
 	})
 
 	t.Run("スペシャルファイルはOpenできない", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
+		if //goland:noinspection ALL
+		runtime.GOOS == "windows" {
 			t.Skip()
 		}
 		_, err := option.InputFiles{Files: []string{"/dev/null"}}.Enumerate()
