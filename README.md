@@ -5,7 +5,7 @@
 
 extra _cut(1)_ command with `awk`'s column selection and slice notation.
 
-![example](./img/example.png)
+![example](assets/example.png)
 
 # Install
 ## go install
