@@ -35,7 +35,7 @@ func TestNewPreSplitByRegexpIterator(t *testing.T) {
 			removeEmpty: true,
 		}},
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d`), re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "", "b", "", "c", "", "d"},
+			a:           []string{"a", "", "b","", "c","", "d"},
 			head:        0,
 			tail:        0,
 			reg:         regexp.MustCompile(`\d`),
@@ -82,7 +82,7 @@ func TestNewPreSplitIterator(t *testing.T) {
 			removeEmpty: true,
 		}},
 		{name: "split by space(remove-empty)", args: args{s: "a b   c d", sep: " ", re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "", "", "c", "d"},
+			a:           []string{"a", "b","", "", "c", "d"},
 			head:        0,
 			tail:        0,
 			sep:         " ",
@@ -115,7 +115,7 @@ func TestPreSplitIterator_ToArray(t *testing.T) {
 		fields fields
 		want   []string
 	}{
-		{name: "contained", fields: fields{a: []string{"a", "b", "c"}}, want: []string{"a", "b", "c"}},
+		{name: "contained", fields: fields{a: []string{"a","b","c"}}, want: []string{"a","b","c"}},
 		{name: "empty", fields: fields{a: nil}, want: nil},
 	}
 	for _, tt := range tests {
@@ -295,12 +295,12 @@ func TestPreSplitIterator_ElementAt(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{name: "", fields: fields{a: []string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: 1}, want: "1", wantErr: false},
-		{name: "", fields: fields{a: []string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: 4}, want: "4", wantErr: false},
-		{name: "", fields: fields{a: []string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: 5}, want: "", wantErr: true},
-		{name: "", fields: fields{a: []string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: -5}, want: "", wantErr: true},
-		{name: "", fields: fields{a: []string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: -4}, want: "1", wantErr: false},
-		{name: "", fields: fields{a: []string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: -1}, want: "4", wantErr: false},
+		{name: "", fields: fields{a:[]string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: 1}, want: "1", wantErr: false},
+		{name: "", fields: fields{a:[]string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: 4}, want: "4", wantErr: false},
+		{name: "", fields: fields{a:[]string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: 5}, want: "", wantErr: true},
+		{name: "", fields: fields{a:[]string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: -5}, want: "", wantErr: true},
+		{name: "", fields: fields{a:[]string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: -4}, want: "1", wantErr: false},
+		{name: "", fields: fields{a:[]string{"1", "2", "3", "4"}, head: 0, tail: 0, sep: " ", reg: nil, l: 4, removeEmpty: false}, args: args{idx: -1}, want: "4", wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
