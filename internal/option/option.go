@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/spf13/viper"
 )
@@ -16,6 +17,8 @@ type Option struct {
 	InputFiles
 	// XSV support
 	Xsv
+	// --template
+	Template *template.Template
 }
 
 // DelimiterOption is setting for --input/output-delimiter option
@@ -82,6 +85,9 @@ const (
 	NameFieldSplit      = "field-split"
 	NameCsv             = "csv"
 	NameTsv             = "tsv"
+	NameTemplate        = "template"
+
+	DefaultTemplate = ""
 )
 
 type SplitStrategy int
@@ -97,6 +103,7 @@ func GetOptionNames() []string {
 		NameFieldSplit,
 		NameCsv,
 		NameTsv,
+		NameTemplate,
 	}
 }
 
@@ -117,7 +124,7 @@ func (x Xsv) IsXsv() (bool, rune) {
 }
 
 // NewOption は viper.Viper からフラグの値を取り出して Option を作って返す
-func NewOption(v *viper.Viper) Option {
+func NewOption(v *viper.Viper) (Option, error) {
 
 	// 入力のデリミターの受け取り、NameFieldSplit が指定されているときは `\s+` で上書き
 	inputDelimiter := v.GetString(NameInputDelimiter)
@@ -127,6 +134,16 @@ func NewOption(v *viper.Viper) Option {
 
 	// デリミターを正規表現として処理するかどうか。NameFieldSplit が指定されているときは強制的にON
 	useRegexp := v.GetBool(NameUseRegexp) || v.GetBool(NameFieldSplit)
+
+	// --templateオプションで出力のフォーマットを指定するやつ
+	var tmpl *template.Template
+	if v.GetString(NameTemplate) != DefaultTemplate {
+		var err error
+		tmpl, err = parseTemplate(v.GetString(NameTemplate))
+		if err != nil {
+			return Option{}, err
+		}
+	}
 
 	return Option{
 		DelimiterOption: DelimiterOption{
@@ -141,5 +158,27 @@ func NewOption(v *viper.Viper) Option {
 			Csv: v.GetBool(NameCsv),
 			Tsv: v.GetBool(NameTsv),
 		},
+		Template: tmpl,
+	}, nil
+}
+
+func parseTemplate(input string) (*template.Template, error) {
+	var result string
+
+	// input ::= char | marker | input
+	// char ::= 任意の文字
+	// marker ::= {}
+	cnt := 0
+	for i := 0; i < len(input); i++ {
+		switch {
+		case input[i] == '{' && i+1 < len(input) && input[i+1] == '}':
+			result += fmt.Sprintf("{{ index . %d }}", cnt)
+			cnt++
+			i++
+		default:
+			result += string(input[i])
+		}
 	}
+
+	return template.New("output").Parse(result)
 }

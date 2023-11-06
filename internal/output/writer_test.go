@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/internal/option"
 	"strings"
 	"testing"
 )
@@ -12,7 +13,11 @@ func TestNewWriter(t *testing.T) {
 	w := &bytes.Buffer{}
 	delim := "d"
 
-	actual := NewWriter(delim, w, true)
+	actual := NewWriter(option.Option{
+		DelimiterOption: option.DelimiterOption{
+			InputDelimiter: delim,
+		},
+	}, w, true)
 
 	assert.NotNil(t, actual)
 	assert.Equal(t, []byte(delim), actual.delimiter)
