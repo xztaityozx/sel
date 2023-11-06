@@ -42,10 +42,6 @@ func (w *Writer) Write(columns ...string) error {
 		}
 	}
 
-	//if _, err := w.buf.WriteString(strings.Join(columns, string(w.delimiter))); err != nil {
-	//	return err
-	//}
-
 	w.writtenColumns += len(columns)
 
 	if w.autoFlush {
