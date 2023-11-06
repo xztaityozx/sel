@@ -77,8 +77,6 @@ func (w *Writer) WriteNewLine() error {
 			return err
 		}
 		w.column = []string{}
-
-		return nil
 	}
 
 	w.writtenColumns = 0
