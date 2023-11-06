@@ -2,6 +2,7 @@ package column
 
 import (
 	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/output"
 	"strconv"
 )
 
@@ -22,7 +23,7 @@ func NewIndexSelectorFromString(str string, def int) (IndexSelector, error) {
 	return NewIndexSelector(num), err
 }
 
-func (i IndexSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+func (i IndexSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
 
 	if i.index == 0 {
 		return w.Write(iter.ToArray()...)

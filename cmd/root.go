@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/output"
 	"io"
 	"log"
 	"os"
@@ -38,7 +39,7 @@ __sel__ect column`,
 			log.Fatalln(err)
 		}
 
-		w := column.NewWriter(opt.OutPutDelimiter, os.Stdout)
+		w := output.NewWriter(opt.OutPutDelimiter, os.Stdout)
 
 		if len(opt.Files) != 0 {
 			files, err := opt.InputFiles.Enumerate()
@@ -128,7 +129,7 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 }
 
 // run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
-func run(input *os.File, option option.Option, w *column.Writer, selectors []column.Selector) error {
+func run(input *os.File, option option.Option, w *output.Writer, selectors []column.Selector) error {
 	defer func(input *os.File) {
 		if err := input.Close(); err != nil {
 			log.Fatalln(err)
@@ -176,7 +177,7 @@ func run(input *os.File, option option.Option, w *column.Writer, selectors []col
 	return w.Flush()
 }
 
-func selectAll(iter *iterator.IEnumerable, w *column.Writer, selectors []column.Selector) error {
+func selectAll(iter *iterator.IEnumerable, w *output.Writer, selectors []column.Selector) error {
 	for _, selector := range selectors {
 		err := selector.Select(w, *iter)
 		if err != nil {
