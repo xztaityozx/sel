@@ -3,6 +3,7 @@ package column
 import (
 	"fmt"
 	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/output"
 	"regexp"
 	"strconv"
 )
@@ -46,7 +47,7 @@ func between(a, max, min int) int {
 }
 
 // Select はクエリに従ってカラムを選択する
-func (s SwitchSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+func (s SwitchSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
 	// isAroundContextなときは、配列の最大長が必要になるので、最初に全部分割してしまう
 	strings := iter.ToArray()
 	maximum := len(strings)

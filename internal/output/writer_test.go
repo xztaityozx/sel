@@ -1,4 +1,4 @@
-package column
+package output
 
 import (
 	"bufio"

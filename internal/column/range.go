@@ -3,6 +3,7 @@ package column
 import (
 	"fmt"
 	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/output"
 )
 
 // RangeSelector はカラムの範囲選択するやつ
@@ -17,7 +18,7 @@ func NewRangeSelector(start, step, stop int, isInfStop bool) RangeSelector {
 	return RangeSelector{start: start, step: step, stop: stop, isInfStop: isInfStop}
 }
 
-func (r RangeSelector) Select(w *Writer, iter iterator.IEnumerable) error {
+func (r RangeSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
 	strings := iter.ToArray()
 	m := len(strings)
 

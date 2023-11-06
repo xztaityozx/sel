@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
 	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/output"
 	"github.com/xztaityozx/sel/test"
 	"math/rand"
 	"reflect"
@@ -63,7 +64,7 @@ func TestIndexSelector_Select(t *testing.T) {
 		var buf []byte
 		w := bytes.NewBuffer(buf)
 
-		writer := NewWriter(" ", w)
+		writer := output.NewWriter(" ", w)
 
 		err := is.Select(writer, iterator.NewIterator(strings.Join(cols, " "), " ", false))
 
