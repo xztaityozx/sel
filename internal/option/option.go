@@ -119,29 +119,21 @@ func (x Xsv) IsXsv() (bool, rune) {
 // NewOption は viper.Viper からフラグの値を取り出して Option を作って返す
 func NewOption(v *viper.Viper) Option {
 
+	// 入力のデリミターの受け取り、NameFieldSplit が指定されているときは `\s+` で上書き
+	inputDelimiter := v.GetString(NameInputDelimiter)
 	if v.GetBool(NameFieldSplit) {
-		return Option{
-			DelimiterOption: DelimiterOption{
-				InputDelimiter:  `\s+`,
-				OutPutDelimiter: v.GetString(NameOutPutDelimiter),
-				RemoveEmpty:     v.GetBool(NameRemoveEmpty),
-				UseRegexp:       true,
-				SplitBefore:     v.GetBool(NameSplitBefore),
-			},
-			InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
-			Xsv: Xsv{
-				Csv: v.GetBool(NameCsv),
-				Tsv: v.GetBool(NameTsv),
-			},
-		}
+		inputDelimiter = `\s+`
 	}
+
+	// デリミターを正規表現として処理するかどうか。NameFieldSplit が指定されているときは強制的にON
+	useRegexp := v.GetBool(NameUseRegexp) || v.GetBool(NameFieldSplit)
 
 	return Option{
 		DelimiterOption: DelimiterOption{
-			InputDelimiter:  v.GetString(NameInputDelimiter),
+			InputDelimiter:  inputDelimiter,
 			OutPutDelimiter: v.GetString(NameOutPutDelimiter),
 			RemoveEmpty:     v.GetBool(NameRemoveEmpty),
-			UseRegexp:       v.GetBool(NameUseRegexp),
+			UseRegexp:       useRegexp,
 			SplitBefore:     v.GetBool(NameSplitBefore),
 		},
 		InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
