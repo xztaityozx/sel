@@ -3,8 +3,8 @@ package column
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/iterator"
-	"github.com/xztaityozx/sel/test_util"
+	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/test"
 	"regexp"
 	"strings"
 	"testing"
@@ -43,11 +43,11 @@ type testEnumerable struct {
 	a []string
 }
 
-func (t *testEnumerable) ResetFromArray(a []string) {
-  panic("implement me")
+func (t *testEnumerable) ResetFromArray(_ []string) {
+	panic("implement me")
 }
 
-func (t *testEnumerable) ElementAt(idx int) (string, error) {
+func (t *testEnumerable) ElementAt(_ int) (string, error) {
 	panic("implement me")
 }
 
@@ -59,7 +59,7 @@ func (t *testEnumerable) Last() (item string, ok bool) {
 	panic("implement me")
 }
 
-func (t *testEnumerable) Reset(s string) {
+func (t *testEnumerable) Reset(_ string) {
 	panic("implement me")
 }
 
@@ -79,7 +79,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 
 	var cols []string
 	for i := 0; i < 20; i++ {
-		cols = append(cols, test_util.RandString(10))
+		cols = append(cols, test.RandString(10))
 	}
 
 	var buf []byte

@@ -3,8 +3,8 @@ package column
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/iterator"
-	"github.com/xztaityozx/sel/test_util"
+	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/test"
 	"math/rand"
 	"reflect"
 	"strings"
@@ -43,7 +43,7 @@ func TestNewIndexSelectorFromString(t *testing.T) {
 }
 
 func TestNewIndexSelector(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 	expect := rand.Int()
 	actual := NewIndexSelector(expect)
 	assert.Equal(t, expect, actual.index)
@@ -51,11 +51,11 @@ func TestNewIndexSelector(t *testing.T) {
 
 func TestIndexSelector_Select(t *testing.T) {
 
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 10; i++ {
 		var cols []string
 		for k := 0; k < 10; k++ {
-			cols = append(cols, test_util.RandString(10))
+			cols = append(cols, test.RandString(10))
 		}
 
 		is := IndexSelector{index: rand.Int() % 10}

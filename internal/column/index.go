@@ -1,9 +1,8 @@
 package column
 
 import (
+	"github.com/xztaityozx/sel/internal/iterator"
 	"strconv"
-
-	"github.com/xztaityozx/sel/iterator"
 )
 
 // IndexSelector は単一のindexを指定してカラムを選択するやつ
