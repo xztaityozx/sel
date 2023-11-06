@@ -92,7 +92,18 @@ func TestGetOptionNames(t *testing.T) {
 		name string
 		want []string
 	}{
-		{name: "とれてますか", want: []string{option.NameInputFiles, option.NameInputDelimiter, option.NameOutPutDelimiter, option.NameUseRegexp, option.NameRemoveEmpty, option.NameSplitBefore, option.NameFieldSplit, option.NameCsv, option.NameTsv}},
+		{name: "とれてますか", want: []string{
+			option.NameInputFiles,
+			option.NameInputDelimiter,
+			option.NameOutPutDelimiter,
+			option.NameUseRegexp,
+			option.NameRemoveEmpty,
+			option.NameSplitBefore,
+			option.NameFieldSplit,
+			option.NameCsv,
+			option.NameTsv,
+			option.NameTemplate,
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -139,8 +150,10 @@ func TestNewOption(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := option.NewOption(tt.args.v); !reflect.DeepEqual(got, tt.want) {
+			if got, err := option.NewOption(tt.args.v); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewOption() = %v, want %v", got, tt.want)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

@@ -33,13 +33,16 @@ __sel__ect column`,
 	Args:    cobra.MinimumNArgs(1),
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
-		opt := option.NewOption(viper.GetViper())
+		opt, err := option.NewOption(viper.GetViper())
+		if err != nil {
+			log.Fatalln(err)
+		}
 		selectors, err := parser.Parse(args)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		w := output.NewWriter(opt.OutPutDelimiter, os.Stdout, false)
+		w := output.NewWriter(opt, os.Stdout, false)
 
 		if len(opt.Files) != 0 {
 			files, err := opt.InputFiles.Enumerate()
@@ -80,6 +83,7 @@ func init() {
 	rootCmd.Flags().BoolP(option.NameFieldSplit, "a", false, "shorthand for -gd '\\s+'")
 	rootCmd.Flags().Bool(option.NameCsv, false, "parse input file as CSV")
 	rootCmd.Flags().Bool(option.NameTsv, false, "parse input file as TSV")
+	rootCmd.Flags().StringP(option.NameTemplate, "t", option.DefaultTemplate, "template for output")
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
 	rootCmd.MarkFlagsMutuallyExclusive(option.NameCsv, option.NameTsv)
 
@@ -92,7 +96,10 @@ func init() {
 		"$ cat /path/to/file | sel 1",
 		"$ sel 1:10 -f ./file",
 		"$ cat /path/to/file.csv | sel -d, 1 2 3 4 -- -1 -2 -3 -4",
+		"$ cat /path/to/file.csv | sel --csv 1 2 3 4",
 		"$ sel 2:: -f ./file",
+		"$ cat /path/to/file | sel /^begin/:/^end/",
+		"$ echo AAA BBB CCC | sel --template 'one: {} two: {} three: {}' 1 2 3",
 	}
 
 	rootCmd.Example = strings.Join(examples, "\n\t")

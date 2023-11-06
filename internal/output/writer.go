@@ -2,7 +2,9 @@ package output
 
 import (
 	"bufio"
+	"github.com/xztaityozx/sel/internal/option"
 	"io"
+	"text/template"
 )
 
 type Writer struct {
@@ -10,16 +12,31 @@ type Writer struct {
 	buf            *bufio.Writer
 	autoFlush      bool
 	writtenColumns int
+	outputTemplate *template.Template
+	column         []string
 }
 
 var newLine = []byte("\n")
 
-func NewWriter(delimiter string, w io.Writer, autoFlush bool) *Writer {
-	return &Writer{delimiter: []byte(delimiter), buf: bufio.NewWriter(w), autoFlush: autoFlush}
+func NewWriter(option option.Option, w io.Writer, autoFlush bool) *Writer {
+	return &Writer{
+		delimiter:      []byte(option.OutPutDelimiter),
+		buf:            bufio.NewWriter(w),
+		autoFlush:      autoFlush,
+		outputTemplate: option.Template,
+		column:         []string{},
+	}
 }
 
 func (w *Writer) Write(columns ...string) error {
 	if len(columns) == 0 {
+		return nil
+	}
+
+	if w.outputTemplate != nil {
+		// テンプレートを使うときは、出力すべきすべてのカラムが揃ってから書き出すので、ここにはバッファに乗せるのみ
+		// 実際の書き込みは WriteNewLine() で行う
+		w.column = append(w.column, columns...)
 		return nil
 	}
 
@@ -51,7 +68,19 @@ func (w *Writer) Write(columns ...string) error {
 	return nil
 }
 
+// WriteNewLine は改行を書き込む。テンプレートを利用している場合は、テンプレートを使った書き込みを行う
 func (w *Writer) WriteNewLine() error {
+	// ref: Write(columns ...string) error
+	if w.outputTemplate != nil {
+		err := w.outputTemplate.Execute(w.buf, w.column)
+		if err != nil {
+			return err
+		}
+		w.column = []string{}
+
+		return nil
+	}
+
 	w.writtenColumns = 0
 	_, err := w.buf.Write(newLine)
 	return err
