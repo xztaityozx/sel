@@ -64,7 +64,7 @@ func TestIndexSelector_Select(t *testing.T) {
 		var buf []byte
 		w := bytes.NewBuffer(buf)
 
-		writer := output.NewWriter(" ", w)
+		writer := output.NewWriter(" ", w, false)
 
 		err := is.Select(writer, iterator.NewIterator(strings.Join(cols, " "), " ", false))
 

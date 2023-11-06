@@ -12,11 +12,12 @@ func TestNewWriter(t *testing.T) {
 	w := &bytes.Buffer{}
 	delim := "d"
 
-	actual := NewWriter(delim, w)
+	actual := NewWriter(delim, w, true)
 
 	assert.NotNil(t, actual)
 	assert.Equal(t, []byte(delim), actual.delimiter)
 	assert.NotNil(t, actual.buf)
+	assert.True(t, actual.autoFlush)
 }
 
 func TestWriter_Write(t *testing.T) {
@@ -57,47 +58,6 @@ func TestWriter_Write(t *testing.T) {
 			_ = w.buf.Flush()
 
 			assert.Equal(t, strings.Join(cols, "d"), buf.String())
-		})
-	}
-}
-
-func TestWriter_SetAutoFlush(t *testing.T) {
-	type fields struct {
-		delimiter []byte
-		buf       *bufio.Writer
-		autoFlush bool
-	}
-	type args struct {
-		b bool
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		expect bool
-	}{
-		{name: "false -> true", fields: fields{
-			delimiter: nil,
-			buf:       nil,
-			autoFlush: false,
-		}, args: args{b: true}, expect: true},
-		{name: "true -> false", fields: fields{
-			delimiter: nil,
-			buf:       nil,
-			autoFlush: true,
-		}, args: args{b: false}, expect: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := &Writer{
-				delimiter: tt.fields.delimiter,
-				buf:       tt.fields.buf,
-				autoFlush: tt.fields.autoFlush,
-			}
-
-			w.SetAutoFlush(tt.args.b)
-
-			assert.Equal(t, tt.expect, w.autoFlush)
 		})
 	}
 }

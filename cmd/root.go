@@ -39,7 +39,7 @@ __sel__ect column`,
 			log.Fatalln(err)
 		}
 
-		w := output.NewWriter(opt.OutPutDelimiter, os.Stdout)
+		w := output.NewWriter(opt.OutPutDelimiter, os.Stdout, false)
 
 		if len(opt.Files) != 0 {
 			files, err := opt.InputFiles.Enumerate()

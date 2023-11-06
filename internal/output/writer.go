@@ -14,12 +14,8 @@ type Writer struct {
 
 var newLine = []byte("\n")
 
-func NewWriter(delimiter string, w io.Writer) *Writer {
-	return &Writer{delimiter: []byte(delimiter), buf: bufio.NewWriter(w), autoFlush: false}
-}
-
-func (w *Writer) SetAutoFlush(b bool) {
-	w.autoFlush = b
+func NewWriter(delimiter string, w io.Writer, autoFlush bool) *Writer {
+	return &Writer{delimiter: []byte(delimiter), buf: bufio.NewWriter(w), autoFlush: autoFlush}
 }
 
 func (w *Writer) Write(columns ...string) error {
