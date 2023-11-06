@@ -61,7 +61,7 @@ func TestRangeSelector_Select(t *testing.T) {
 		for _, v := range dataset {
 			rs := NewRangeSelector(v.start, v.step, v.stop, false)
 			expect := expectFactory(v.expects)
-			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{InputDelimiter: " "}}, w, true)
+			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
 			err := rs.Select(writer, &testEnumerable{a: cols})
 			assert.Nil(t, writer.Flush())
 			assert.Nil(t, err)
@@ -83,7 +83,7 @@ func TestRangeSelector_Select(t *testing.T) {
 
 		for _, v := range dataset {
 			rs := NewRangeSelector(v.start, v.step, v.stop, false)
-			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{InputDelimiter: " "}}, w, true)
+			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
 			err := rs.Select(writer, &testEnumerable{a: cols})
 			assert.Nil(t, writer.Flush())
 			assert.NotNil(t, err)
@@ -94,7 +94,7 @@ func TestRangeSelector_Select(t *testing.T) {
 
 	t.Run("Inf", func(t *testing.T) {
 		rs := NewRangeSelector(1, 1, 1, true)
-		writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{InputDelimiter: " "}}, w, true)
+		writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
 		err := rs.Select(writer, &testEnumerable{a: cols})
 		assert.Nil(t, writer.Flush())
 		assert.Nil(t, err)

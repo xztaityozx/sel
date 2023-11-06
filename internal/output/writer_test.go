@@ -15,7 +15,7 @@ func TestNewWriter(t *testing.T) {
 
 	actual := NewWriter(option.Option{
 		DelimiterOption: option.DelimiterOption{
-			InputDelimiter: delim,
+			OutPutDelimiter: delim,
 		},
 	}, w, true)
 
