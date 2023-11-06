@@ -2,10 +2,9 @@ package column
 
 import (
 	"fmt"
+	"github.com/xztaityozx/sel/internal/iterator"
 	"regexp"
 	"strconv"
-
-	"github.com/xztaityozx/sel/iterator"
 )
 
 type address struct {
@@ -50,17 +49,17 @@ func between(a, max, min int) int {
 func (s SwitchSelector) Select(w *Writer, iter iterator.IEnumerable) error {
 	// isAroundContextなときは、配列の最大長が必要になるので、最初に全部分割してしまう
 	strings := iter.ToArray()
-	max := len(strings)
-	min := 0
+	maximum := len(strings)
+	minimum := 0
 	var rt []string
 	if s.end.isAroundContext {
 		for i, v := range strings {
 			if s.begin.match(v, i) {
 				// マッチした位置から前後どちらかにs.end.num個
 				if s.end.num < 0 {
-					rt = append(rt, strings[between(i+s.end.num, max, min):between(i+1, max, min)]...)
+					rt = append(rt, strings[between(i+s.end.num, maximum, minimum):between(i+1, maximum, minimum)]...)
 				} else {
-					rt = append(rt, strings[between(i, max, min):between(i+s.end.num+1, max, min)]...)
+					rt = append(rt, strings[between(i, maximum, minimum):between(i+s.end.num+1, maximum, minimum)]...)
 				}
 			}
 		}

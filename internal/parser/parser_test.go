@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/xztaityozx/sel/column"
+	"github.com/xztaityozx/sel/internal/column"
 	"reflect"
 	"testing"
 )

@@ -3,18 +3,17 @@ package cmd
 import (
 	"bufio"
 	"encoding/csv"
+	"github.com/xztaityozx/sel/internal/iterator"
 	"io"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/xztaityozx/sel/iterator"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/xztaityozx/sel/column"
-	"github.com/xztaityozx/sel/option"
-	"github.com/xztaityozx/sel/parser"
+	"github.com/xztaityozx/sel/internal/column"
+	"github.com/xztaityozx/sel/internal/option"
+	"github.com/xztaityozx/sel/internal/parser"
 )
 
 var Version string = "undefined"
