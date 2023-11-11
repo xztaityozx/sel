@@ -54,6 +54,11 @@ jobs:
       - name: Test
         run: |
           go test -v ./...
+
+      - name: E2E test
+        working_dir: ./test/e2e
+        run: |
+          ./test.sh
  
   release:
     name: Release Binaries
