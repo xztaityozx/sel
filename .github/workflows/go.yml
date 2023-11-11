@@ -55,6 +55,9 @@ jobs:
         run: |
           go test -v ./...
 
+      - name: Build
+        run: make build
+
       - name: E2E test
         working-directory: ./test/e2e
         shell: bash

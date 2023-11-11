@@ -1,4 +1,6 @@
-#!/bin/bash -ue
+#!/bin/bash
+
+set -e
 
 SEL=../../dist/sel
 
