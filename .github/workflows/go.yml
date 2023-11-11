@@ -57,6 +57,7 @@ jobs:
 
       - name: E2E test
         working-directory: ./test/e2e
+        shell: bash
         run: |
           ./test.sh
  
