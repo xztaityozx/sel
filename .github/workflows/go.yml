@@ -56,7 +56,7 @@ jobs:
           go test -v ./...
 
       - name: E2E test
-        working_dir: ./test/e2e
+        working-directory: ./test/e2e
         run: |
           ./test.sh
  
