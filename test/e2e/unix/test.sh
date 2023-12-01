@@ -10,5 +10,5 @@ ls -1 | grep -v test.sh | \
     input=$DIR/input
     output=$DIR/output
     echo -en "test $DIR: $SEL $commandline ... "
-    cat $input | eval "$SEL $commandline" | diff - $output && echo "OK" || echo "NG"
+    cat $input | eval "$SEL $commandline" | diff - $output && echo "OK" || ( echo "NG"; false )
   done
