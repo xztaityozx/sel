@@ -62,7 +62,8 @@ jobs:
         working-directory: ./test/e2e/${{ matrix.os }}
         shell: pwsh
         run: |
-          ../test.ps1
+          Install-Module -Name Pester -Force
+          Invoke-Pester ../test.ps1
 
       - name: E2E test (bash)
         working-directory: ./test/e2e/${{ matrix.os }}
