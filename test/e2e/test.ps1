@@ -4,7 +4,7 @@ $tests = Get-ChildItem '0*' | ForEach-Object {
   $name=$_.Name;
   $inputFile="$name/input";
   $outputFile="$name/output";
-  $arguments=(Get-Content "$name/commandline");
+  $arguments=(Get-Content -Encoding utf8 "$name/commandline");
   
   @{ 
     Name = $name;
@@ -16,7 +16,7 @@ $tests = Get-ChildItem '0*' | ForEach-Object {
 
 Describe 'sel on PowerShell' {
   It "cat <inputFile> | sel <arguments> Returns <outputFile> (<name>)" -ForEach $tests {
-    $expected = Get-Content $outputFile;
-    Invoke-Expression "Get-Content $inputFile | ../../../dist/sel $arguments" | Should -Be $expected;
+    $expected = Get-Content -Encoding utf8 $outputFile;
+    Invoke-Expression "Get-Content -Encoding utf8 $inputFile | ../../../dist/sel $arguments" | Should -Be $expected;
   }
 }
