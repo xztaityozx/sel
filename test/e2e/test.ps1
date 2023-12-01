@@ -3,14 +3,13 @@ $result = Get-ChildItem 0* | ForEach-Object {
   $arguments=(Get-Content "$name/commandline");
   $command="Get-Content $name/input | ../../../dist/sel $arguments";
 
-  Write-Host "${name}: ${command}";
   Compare-Object (Invoke-Expression "$command") (Get-Content "$name/output");
   if ( $? -eq $True ) {
-    Write-Host "OK"
-    return 0
+    Write-Host "${name}: sel ${arguments} ... OK";
+    0;
   } else {
-    Write-Host "NG"
-    return 1
+    Write-Host "${name}: sel ${arguments} ... NG";
+    1;
   }
 } | Measure-Object -Sum
 
