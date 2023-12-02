@@ -25,7 +25,6 @@ jobs:
     
   test:
     name: Unit Test
-    needs: [linter]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
