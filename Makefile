@@ -10,7 +10,7 @@ clean:
 
 $(EXECUTABLE_FILE):
 	@mkdir -p $(@D)
-	@go build -o $(EXECUTABLE_FILE) -ldflags="-s -w -X github.com/xztaityozx/sel/cmd.Version=develop($(shell git rev-parse HEAD))"
+	@go build -o $(DIST_DIR) -ldflags="-s -w -X github.com/xztaityozx/sel/cmd.Version=develop($(shell git rev-parse HEAD))"
 
 .PHONY: build
 build: $(EXECUTABLE_FILE)
