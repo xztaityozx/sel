@@ -14,7 +14,7 @@ $tests = Get-ChildItem '0*' | ForEach-Object {
   };
 }
 
-$selPath = if ( [System.IO.Path]::Exists("../../../dist/sel.exe") ) {
+$selPath = if ( Test-Path "../../../dist/sel.exe" ) {
   "../../../dist/sel.exe"
 } else {
   "../../../dist/sel"
