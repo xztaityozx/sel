@@ -66,6 +66,7 @@ jobs:
           ../test.ps1
 
       - name: E2E test (bash)
+        if: ${{ matrix.os != 'windows-latest' }}
         working-directory: ./test/e2e/${{ matrix.os }}
         shell: bash
         run: |
