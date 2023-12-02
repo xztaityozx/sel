@@ -35,6 +35,7 @@ $ sel completion zsh > ${fpath[1]}/_sel
 # Usage
 
 ```
+
           _ 
  ___  ___| |
 / __|/ _ \ |
@@ -60,7 +61,10 @@ Examples:
 	$ cat /path/to/file | sel 1
 	$ sel 1:10 -f ./file
 	$ cat /path/to/file.csv | sel -d, 1 2 3 4 -- -1 -2 -3 -4
+	$ cat /path/to/file.csv | sel --csv 1 2 3 4
 	$ sel 2:: -f ./file
+	$ cat /path/to/file | sel /^begin/:/^end/
+	$ echo AAA BBB CCC | sel --template 'one: {} two: {} three: {}' 1 2 3
 
 Available Commands:
   completion  Generate completion script
@@ -75,6 +79,7 @@ Flags:
   -D, --output-delimiter string   sets field delimiter(output) (default " ")
   -r, --remove-empty              remove empty sequence
   -S, --split-before              split all column before select
+  -t, --template string           template for output
       --tsv                       parse input file as TSV
   -g, --use-regexp                use regular expressions for input delimiter
   -v, --version                   version for sel
