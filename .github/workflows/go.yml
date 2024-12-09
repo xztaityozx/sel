@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: 
       - '**.go'
-      - '.github/workflows/go.yaml'
+      - '.github/workflows/go.yml'
       - 'test/e2e/**'
 
 jobs:
