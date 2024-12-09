@@ -42,7 +42,7 @@ type InputFiles struct {
 
 // Enumerate /path/to/input/files
 func (ifs InputFiles) Enumerate() ([]string, error) {
-	if ifs.Files == nil || len(ifs.Files) == 0 {
+	if en(ifs.Files) == 0 {
 		return nil, fmt.Errorf("there are no files")
 	}
 
