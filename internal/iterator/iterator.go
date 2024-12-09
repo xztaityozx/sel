@@ -263,7 +263,7 @@ type RegexpIterator struct {
 
 func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 	if idx == 0 {
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 
 	if idx > 0 {
@@ -285,7 +285,7 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			}
 		}
 
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	} else {
 		// 負のインデックス指定されたとき
 		// rightmostなIndexの検索ができないので残りの文字列をすべて分割してしまう
@@ -330,7 +330,7 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			return s, nil
 		}
 
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 }
 
