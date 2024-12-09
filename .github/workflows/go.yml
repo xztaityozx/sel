@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: 
       - '**.go'
-      - '.github/workflows/go.yaml'
+      - '.github/workflows/go.yml'
       - 'test/e2e/**'
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
         with:
           go-version: ^1.19
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
     
