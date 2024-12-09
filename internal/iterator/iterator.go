@@ -1,6 +1,7 @@
 package iterator
 
 import (
+  "errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -96,7 +97,7 @@ func (i *Iterator) Reset(s string) {
 // ElementAt は指定したインデックスの値を返す。1-indexed
 func (i *Iterator) ElementAt(idx int) (string, error) {
 	if idx == 0 {
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 
 	if idx < 0 {
@@ -116,7 +117,7 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 			return s, nil
 		}
 
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	} else {
 		if i.head >= idx {
 			return i.buf[idx], nil
@@ -136,7 +137,7 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 			}
 		}
 
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 }
 
@@ -262,7 +263,7 @@ type RegexpIterator struct {
 
 func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 	if idx == 0 {
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 
 	if idx > 0 {
@@ -284,7 +285,7 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			}
 		}
 
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	} else {
 		// 負のインデックス指定されたとき
 		// rightmostなIndexの検索ができないので残りの文字列をすべて分割してしまう
@@ -329,7 +330,7 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			return s, nil
 		}
 
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 }
 
