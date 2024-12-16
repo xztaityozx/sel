@@ -37,7 +37,7 @@ jobs:
       - name: before cache
         run: |
           mkdir -p ~/go/pkg/mod
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: cache-go
         with:
           key: ${{ matrix.os }}-go-${{ hashFiles('**/go.sum') }}
