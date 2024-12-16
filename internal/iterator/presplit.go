@@ -2,7 +2,6 @@ package iterator
 
 import (
   "errors"
-	"fmt"
 	"regexp"
 	"strings"
 )
