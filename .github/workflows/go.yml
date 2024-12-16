@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: 
       - '**.go'
-      - '.github/workflows/go.yaml'
+      - '.github/workflows/go.yml'
       - 'test/e2e/**'
 
 jobs:
@@ -16,12 +16,12 @@ jobs:
     name: "golang-linter"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ^1.19
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
     
@@ -33,11 +33,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: before cache
         run: |
           mkdir -p ~/go/pkg/mod
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: cache-go
         with:
           key: ${{ matrix.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -45,7 +45,7 @@ jobs:
           restore-keys: |
             go-${{ matrix.os }}-
       - name: Setup GoLang
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ^1.19
       - name: Get Dependencies
@@ -80,15 +80,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ^1.19
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest

@@ -1,7 +1,7 @@
 package iterator
 
 import (
-	"fmt"
+  "errors"
 	"regexp"
 	"strings"
 )
@@ -18,12 +18,12 @@ type PreSplitIterator struct {
 
 func (p *PreSplitIterator) ElementAt(idx int) (string, error) {
 	if p.l < idx {
-		return "", fmt.Errorf(IndexOutOfRange)
+		return "", errors.New(IndexOutOfRange)
 	}
 
 	if idx < 0 {
 		if -p.l > idx {
-			return "", fmt.Errorf(IndexOutOfRange)
+			return "", errors.New(IndexOutOfRange)
 		}
 		return p.a[p.l+idx], nil
 	}
