@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -13,9 +12,6 @@ import (
 
 func runSel(sel string, args, stdin []string) (stdout, stderr []string, err error) {
 	newLine := "\n"
-	if runtime.GOOS == "windows" {
-		newLine = "\r\n"
-	}
 
 	cmd := exec.Command(sel, args...)
 
