@@ -54,25 +54,12 @@ jobs:
         if: steps.cache-go.outputs.cache-hit != 'true'
         run: go get -v -t -d ./...
 
-      - name: Test
-        run: |
-          go test -v ./...
-
       - name: Build
         run: make build
 
-      - name: E2E test (pwsh)
-        working-directory: ./test/e2e/${{ matrix.os }}
-        shell: pwsh
+      - name: Test
         run: |
-          ../test.ps1
-
-      - name: E2E test (bash)
-        if: ${{ matrix.os != 'windows-latest' }}
-        working-directory: ./test/e2e/${{ matrix.os }}
-        shell: bash
-        run: |
-          ../test.sh
+          go test -v ./...
 
  
   release:

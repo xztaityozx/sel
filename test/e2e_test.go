@@ -12,10 +12,6 @@ import (
 )
 
 func runSel(sel string, args, stdin []string) (stdout, stderr []string, err error) {
-	stdout = nil
-	stderr = nil
-	err = nil
-
 	newLine := "\n"
 	if runtime.GOOS == "windows" {
 		newLine = "\r\n"
@@ -41,7 +37,6 @@ func runSel(sel string, args, stdin []string) (stdout, stderr []string, err erro
 
 func Test_E2E(t *testing.T) {
 	as := assert.New(t)
-	exec.Command("make", "clean", "build").Run()
 	selPath := filepath.Join(ProjectRoot(), "dist", "sel")
 
 	type input struct {
