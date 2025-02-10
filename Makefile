@@ -6,7 +6,7 @@ EXECUTABLE_FILE := $(DIST_DIR)/sel
 all: clean test build
 
 clean:
-	rm -r $(DIST_DIR)
+	test -e "$(DIST_DIR)" && rm -r $(DIST_DIR) || true
 
 $(EXECUTABLE_FILE):
 	@mkdir -p $(@D)
@@ -16,5 +16,5 @@ $(EXECUTABLE_FILE):
 build: $(EXECUTABLE_FILE)
 
 .PHONY: test
-test:
+test: build
 	@go test -v ./...
