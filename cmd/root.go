@@ -45,7 +45,7 @@ __sel__ect column`,
 		w := output.NewWriter(opt, os.Stdout, false)
 
 		if len(opt.Files) != 0 {
-			files, err := opt.InputFiles.Enumerate()
+			files, err := opt.Enumerate()
 			if err != nil {
 				log.Fatalln(err)
 			}
