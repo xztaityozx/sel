@@ -62,16 +62,14 @@ func removeEmpty(s []string) []string {
 
 // Iterator は特定の文字で分割するイテレーター
 type Iterator struct {
-	// 切り出し結果を保持しておくmap
-	buf map[int]string
+	// 前方から分割した結果 (index 0 = 1番目の要素)
+	front []string
+	// 後方から分割した結果 (index 0 = 最後の要素 = -1)
+	back []string
+	// 未分割の残り文字列
+	remaining string
 	// 区切り文字
 	sep string
-	// オリジナル文字列
-	s string
-	// 現在の切り出し先頭位置
-	head int
-	// 現在の切り出し末尾位置
-	tail int
 	// 区切り文字列の長さ
 	sepLen int
 	// 長さ0な文字列を要素に含めるかどうか
@@ -83,14 +81,15 @@ type Iterator struct {
 var IndexOutOfRange = "index out of range"
 
 func (i *Iterator) String() string {
-	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\thead: %d,\n\ttail: %d\n\ts: '%s',\n\tbuf: %v\n}", i.sep, i.sepLen, i.head, i.tail, i.s, i.buf)
+	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\tfront: %v,\n\tback: %v\n\tremaining: '%s'\n}", i.sep, i.sepLen, i.front, i.back, i.remaining)
 }
 
 // Reset はこのイテレーターをリセットする
 func (i *Iterator) Reset(s string) {
-	i.s = s
-	i.head = 0
-	i.tail = 0
+	i.remaining = s
+	// スライスをクリアするが、容量は維持
+	i.front = i.front[:0]
+	i.back = i.back[:0]
 	i.a = nil
 }
 
@@ -100,50 +99,67 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 		return "", errors.New(IndexOutOfRange)
 	}
 
-	if idx < 0 {
-		if i.tail <= idx {
-			return i.buf[idx], nil
+	if idx > 0 {
+		// 正のインデックス: front スライスを使用
+		if idx <= len(i.front) {
+			return i.front[idx-1], nil
 		}
 
-		for _, ok := i.Last(); ok && i.tail >= idx; _, ok = i.Last() {
-		}
-
-		if i.tail <= idx {
-			return i.buf[idx], nil
-		}
-
-		if s, ok := i.buf[idx-i.tail+i.head+1]; ok {
-			i.buf[idx] = s
-			return s, nil
-		}
-
-		return "", errors.New(IndexOutOfRange)
-	} else {
-		if i.head >= idx {
-			return i.buf[idx], nil
-		}
-
-		for _, ok := i.Next(); ok && i.head <= idx; _, ok = i.Next() {
-		}
-
-		if i.head >= idx {
-			return i.buf[idx], nil
-		}
-
-		if i.head+(-i.tail) >= idx {
-			if s, ok := i.buf[idx-i.head+i.tail-1]; ok {
-				i.buf[idx] = s
-				return s, nil
+		// 足りなければ Next() で追加分割
+		for len(i.front) < idx {
+			if _, ok := i.Next(); !ok {
+				break
 			}
+		}
+
+		if idx <= len(i.front) {
+			return i.front[idx-1], nil
+		}
+
+		// front + back の合計で到達可能かチェック
+		total := len(i.front) + len(i.back)
+		if idx <= total {
+			// back から取得（back は逆順なので変換が必要）
+			backIdx := idx - len(i.front) - 1
+			return i.back[len(i.back)-1-backIdx], nil
 		}
 
 		return "", errors.New(IndexOutOfRange)
 	}
+
+	// 負のインデックス: back スライスを使用
+	absIdx := -idx // -1 -> 1, -2 -> 2, ...
+	if absIdx <= len(i.back) {
+		return i.back[absIdx-1], nil
+	}
+
+	// 足りなければ Last() で追加分割
+	for len(i.back) < absIdx {
+		if _, ok := i.Last(); !ok {
+			break
+		}
+	}
+
+	if absIdx <= len(i.back) {
+		return i.back[absIdx-1], nil
+	}
+
+	// front + back の合計で到達可能かチェック
+	total := len(i.front) + len(i.back)
+	if absIdx <= total {
+		// front から取得
+		frontIdx := len(i.front) - (absIdx - len(i.back))
+		if frontIdx >= 0 && frontIdx < len(i.front) {
+			return i.front[frontIdx], nil
+		}
+	}
+
+	return "", errors.New(IndexOutOfRange)
 }
 
 // Next は先頭から次の要素を取り出す
 func (i *Iterator) Next() (item string, ok bool) {
-	s := i.s
+	s := i.remaining
 
 	if s == "" {
 		return "", false
@@ -151,28 +167,25 @@ func (i *Iterator) Next() (item string, ok bool) {
 
 	m := strings.Index(s, i.sep)
 	if m < 0 {
-		i.head++
-		i.buf[i.head] = s
-		i.s = ""
+		i.front = append(i.front, s)
+		i.remaining = ""
 		return s, true
 	}
 
 	a := s[:m]
-	i.s = s[m+i.sepLen:]
+	i.remaining = s[m+i.sepLen:]
 
 	if i.removeEmpty && a == "" {
 		return i.Next()
 	}
 
-	i.head++
-	i.buf[i.head] = a
-
+	i.front = append(i.front, a)
 	return a, true
 }
 
 // Last は末尾から要素を取り出す
 func (i *Iterator) Last() (item string, ok bool) {
-	s := i.s
+	s := i.remaining
 
 	if s == "" {
 		return "", false
@@ -180,21 +193,19 @@ func (i *Iterator) Last() (item string, ok bool) {
 
 	m := strings.LastIndex(s, i.sep)
 	if m < 0 {
-		i.tail--
-		i.buf[i.tail] = s
-		i.s = ""
+		i.back = append(i.back, s)
+		i.remaining = ""
 		return s, true
 	}
 
 	a := s[m+i.sepLen:]
-	i.s = s[:m]
+	i.remaining = s[:m]
 
 	if i.removeEmpty && a == "" {
 		return i.Last()
 	}
 
-	i.tail--
-	i.buf[i.tail] = a
+	i.back = append(i.back, a)
 	return a, true
 }
 
@@ -202,21 +213,28 @@ func (i *Iterator) ToArray() []string {
 	if i.a != nil {
 		return i.a
 	}
-	a := make([]string, i.head)
-	for k := 1; k <= i.head; k++ {
-		a[k-1] = i.buf[k]
+
+	// front + remaining + back(逆順) を結合
+	var a []string
+
+	// front をコピー
+	if len(i.front) > 0 {
+		a = make([]string, len(i.front), len(i.front)+len(i.back)+10)
+		copy(a, i.front)
 	}
 
-	if i.s != "" {
-		b := strings.Split(i.s, i.sep)
+	// remaining を分割して追加
+	if i.remaining != "" {
+		b := strings.Split(i.remaining, i.sep)
 		if i.removeEmpty {
 			b = removeEmpty(b)
 		}
 		a = append(a, b...)
 	}
 
-	for k := i.tail; k <= -1; k++ {
-		a = append(a, i.buf[k])
+	// back を逆順で追加
+	for j := len(i.back) - 1; j >= 0; j-- {
+		a = append(a, i.back[j])
 	}
 
 	i.a = a
@@ -228,14 +246,13 @@ func (i *Iterator) ResetFromArray(_ []string) {
 }
 
 func NewIterator(s, sep string, removeEmpty bool) *Iterator {
-	buf := make(map[int]string, 20)
-	buf[0] = s
+	// 初期容量を設定（平均的なカラム数を想定）
+	const initialCap = 16
 	return &Iterator{
-		buf:         buf,
+		front:       make([]string, 0, initialCap),
+		back:        make([]string, 0, initialCap),
+		remaining:   s,
 		sep:         sep,
-		s:           s,
-		head:        0,
-		tail:        0,
 		sepLen:      len(sep),
 		removeEmpty: removeEmpty,
 	}
