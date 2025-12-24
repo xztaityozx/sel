@@ -1,69 +1,65 @@
 # CLAUDE.md
 
-このファイルはこのリポジトリでClaude Code (claude.ai/code) が作業する際のガイダンスを提供します。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## プロジェクト概要
+## Project Overview
 
-**sel** はUnixの`cut`コマンドをawkライクなカラム選択とスライス記法で拡張したコマンドラインツールです。1インデックス記法、スライス範囲、正規表現、テンプレートベースの出力フォーマットを使用してテキスト入力からカラムを選択できます。
+`sel` is a Go CLI tool for column selection from text input, combining `cut(1)` functionality with `awk`-style column selection and Python-like slice notation. Built with Cobra/Viper.
 
-## 開発コマンド
+## Build & Test Commands
 
-### ビルド
 ```bash
-make build          # バイナリをdist/selにビルド
-make all           # クリーン、テスト、ビルドを実行
+# Build (outputs to dist/sel)
+make build
+
+# Run all tests (builds first)
+make test
+
+# Run tests only
+go test -v ./...
+
+# Run specific package tests
+go test -v ./internal/column/...
+go test -v ./internal/parser/...
+
+# Run single test
+go test -v ./test -run Test_E2E
+
+# Lint
+golangci-lint run
 ```
 
-### テスト
-```bash
-make test          # 全テストを実行（先にビルドが必要）
-go test -v ./...   # テストを直接実行
-```
+## Architecture
 
-### クリーンアップ
-```bash
-make clean         # dist/ディレクトリを削除
-```
+### Query Flow
+1. **Parser** (`internal/parser/`) - Parses query strings into `Selector` implementations
+   - Index queries: `1`, `-1`
+   - Range queries: `1:10`, `1:10:2`, `-4:`
+   - Switch queries (sed/awk 2addr style): `/regexp/:/regexp/`, `1:/end/`, `/start/:+3`
 
-## アーキテクチャ
+2. **Selectors** (`internal/column/`) - Three selector types implementing `Selector` interface:
+   - `IndexSelector` - Single column by index
+   - `RangeSelector` - Range with optional step (Python slice notation)
+   - `SwitchSelector` - Regex-based range selection with +N/-N context support
 
-コードベースはクリーンアーキテクチャの原則に従い、以下の主要パッケージで構成されています：
+3. **Iterators** (`internal/iterator/`) - Line splitting strategies via `IEnumerable` interface:
+   - `Iterator` - On-demand string splitting
+   - `RegexpIterator` - Regex-based splitting
+   - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
 
-- **cmd/**: Cobraフレームワークを使用したCLIインターフェース
-- **internal/column/**: カラム選択戦略（IndexSelector、RangeSelector、SwitchSelector）
-- **internal/iterator/**: テキスト解析戦略（Iterator、RegexpIterator、PreSplitIterator）
-- **internal/option/**: Viperを使用した設定管理
-- **internal/output/**: 出力のフォーマットと書き込み
-- **internal/parser/**: スライス記法と正規表現パターンのクエリ解析
+4. **Output** (`internal/output/`) - `Writer` handles delimiter joining and template-based output
 
-### 主要インターフェース
+### Key Design Decisions
+- **1-indexed columns**: Index `0` returns the entire line (like awk's `$0`)
+- **Negative indices**: `-1` is last column, `-2` is second-to-last
+- **Lazy vs eager splitting**: Default is lazy (efficient for early columns), `-S` flag pre-splits (efficient for later columns)
+- **CSV/TSV mode**: Uses `encoding/csv` for proper quote handling
 
-- `column.Selector`: カラム選択の動作を定義
-- `iterator.IEnumerable`: テキストのイテレーション/解析の動作を定義
-- 全ての戦略はポリモーフィズムのためにこれらのインターフェースを実装
-
-## カラムインデックス
-
-- 1インデックスによるカラムアクセス（awkの慣例に従う）
-- インデックス`0`は行全体を参照
-- 末尾からの相対アクセス用の負のインデックスをサポート
-- クエリ構文: `1`、`2:5`、`1::2`、`/start/:/end/`
-
-## テスト
-
-- 各パッケージの単体テスト（`*_test.go`）
-- `test/e2e_test.go`のEnd-to-Endテスト
-- テストは先にバイナリをビルドする必要がある（`make test`で処理される）
-
-## 依存関係
-
-go.modで管理される主要な依存関係：
-- Cobra v1.8.1 - CLI用
-- Viper v1.20.1 - 設定管理用
-- Testify v1.10.0 - テスト用
-
-## パフォーマンスに関する考慮事項
-
-- Iteratorパターンによる遅延評価
-- 多数のカラムアクセスのシナリオ用のPreSplitIterator
-- 出力ライターでのバッファードI/O
+### Command Flags (defined in `cmd/root.go`)
+- `-d`/`-D`: Input/output delimiters
+- `-g`: Use regexp for input delimiter
+- `-a`: Shorthand for `-gd '\s+'`
+- `-r`: Remove empty columns
+- `-S`: Pre-split before selection
+- `--csv`/`--tsv`: CSV/TSV parsing mode
+- `-t`: Template output with `{}` placeholders

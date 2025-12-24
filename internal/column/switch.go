@@ -46,13 +46,43 @@ func between(a, max, min int) int {
 	return a
 }
 
+// abs は整数の絶対値を返す
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
 // Select はクエリに従ってカラムを選択する
 func (s SwitchSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
 	// isAroundContextなときは、配列の最大長が必要になるので、最初に全部分割してしまう
 	strings := iter.ToArray()
 	maximum := len(strings)
 	minimum := 0
-	var rt []string
+
+	// スライスの初期容量を見積もる
+	var estimatedCap int
+	if s.end.isAroundContext {
+		// AroundContext: コンテキスト幅を基準に見積もり
+		contextWidth := abs(s.end.num) + 1
+		if s.begin.regexp != nil {
+			// 正規表現: 複数マッチの可能性があるため、大きめに確保
+			// 最悪ケースでは全要素がマッチし、各マッチでcontextWidth個の要素が出力される
+			estimatedCap = maximum * contextWidth
+		} else {
+			// インデックス指定: 1箇所のみマッチ
+			estimatedCap = contextWidth
+		}
+	} else {
+		// 通常モード: 半分程度がマッチすると仮定
+		estimatedCap = maximum / 2
+		if estimatedCap < 8 {
+			estimatedCap = 8
+		}
+	}
+
+	rt := make([]string, 0, estimatedCap)
 	if s.end.isAroundContext {
 		for i, v := range strings {
 			if s.begin.match(v, i) {
