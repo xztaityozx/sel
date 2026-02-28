@@ -29,11 +29,11 @@ func TestNewIterator(t *testing.T) {
 			as := assert.New(t)
 
 			as.NotNil(got)
-			as.Equal(tt.args.s, got.s)
+			as.Equal(tt.args.s, got.remaining)
 			as.Equal(tt.args.sep, got.sep)
 			as.Equal(len(tt.args.sep), len(got.sep))
-			as.Equal(0, got.head)
-			as.Equal(0, got.tail)
+			as.Equal(0, len(got.front))
+			as.Equal(0, len(got.back))
 			as.Equal(tt.args.re, got.removeEmpty)
 		})
 	}
@@ -41,11 +41,10 @@ func TestNewIterator(t *testing.T) {
 
 func TestIterator_Reset(t *testing.T) {
 	type fields struct {
-		buf         map[int]string
+		front       []string
+		back        []string
+		remaining   string
 		sep         string
-		s           string
-		head        int
-		tail        int
 		sepLen      int
 		removeEmpty bool
 	}
@@ -57,16 +56,15 @@ func TestIterator_Reset(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		{name: "", fields: fields{buf: make(map[int]string), sep: " ", s: "before", head: 100, tail: 200, sepLen: 1, removeEmpty: false}, args: args{s: "after"}},
+		{name: "", fields: fields{front: []string{"a", "b"}, back: []string{"z"}, sep: " ", remaining: "before", sepLen: 1, removeEmpty: false}, args: args{s: "after"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
+				remaining:   tt.fields.remaining,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
@@ -77,9 +75,9 @@ func TestIterator_Reset(t *testing.T) {
 			as.Equal(tt.fields.sep, i.sep)
 			as.Equal(tt.fields.sepLen, i.sepLen)
 			as.Equal(tt.fields.removeEmpty, i.removeEmpty)
-			as.Equal(tt.args.s, i.s)
-			as.Equal(0, i.head)
-			as.Equal(0, i.tail)
+			as.Equal(tt.args.s, i.remaining)
+			as.Equal(0, len(i.front))
+			as.Equal(0, len(i.back))
 			as.Nil(i.a)
 		})
 	}
@@ -87,11 +85,10 @@ func TestIterator_Reset(t *testing.T) {
 
 func TestIterator_ElementAt(t *testing.T) {
 	type fields struct {
-		buf         map[int]string
+		front       []string
+		back        []string
+		remaining   string
 		sep         string
-		s           string
-		head        int
-		tail        int
 		sepLen      int
 		removeEmpty bool
 	}
@@ -105,24 +102,23 @@ func TestIterator_ElementAt(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{name: "index out of range", wantErr: true, fields: fields{}},
-		{name: "1", wantErr: false, fields: fields{buf: map[int]string{1: "abc"}, head: 1}, want: "abc", args: args{idx: 1}},
-		{name: "2(index out of range)", wantErr: true, fields: fields{buf: map[int]string{1: "abc"}, head: 1, s: ""}, args: args{idx: 2}},
-		{name: "-1", wantErr: false, fields: fields{buf: map[int]string{1: "abc"}, head: 1, s: ""}, want: "abc", args: args{idx: -1}},
-		{name: "-1(index out of range)", wantErr: true, fields: fields{buf: map[int]string{1: "abc"}, head: 1, s: ""}, args: args{idx: -2}},
-		{name: "remove-empty", wantErr: false, fields: fields{buf: map[int]string{1: "a"}, head: 1, tail: 0, s: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: 3}, want: "c"},
-		{name: "remove-empty(index out of range)", wantErr: true, fields: fields{buf: map[int]string{1: "a"}, head: 1, tail: 0, s: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: 5}},
-		{name: "remove-empty", wantErr: false, fields: fields{buf: map[int]string{1: "a"}, head: 1, tail: 0, s: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: -3}, want: "b"},
-		{name: "remove-empty(index out of range)", wantErr: true, fields: fields{buf: map[int]string{1: "a"}, head: 1, tail: 0, s: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: -5}},
+		{name: "index out of range (idx=0)", wantErr: true, fields: fields{}},
+		{name: "1", wantErr: false, fields: fields{front: []string{"abc"}}, want: "abc", args: args{idx: 1}},
+		{name: "2(index out of range)", wantErr: true, fields: fields{front: []string{"abc"}, remaining: ""}, args: args{idx: 2}},
+		{name: "-1", wantErr: false, fields: fields{front: []string{"abc"}, remaining: ""}, want: "abc", args: args{idx: -1}},
+		{name: "-1(index out of range)", wantErr: true, fields: fields{front: []string{"abc"}, remaining: ""}, args: args{idx: -2}},
+		{name: "remove-empty", wantErr: false, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: 3}, want: "c"},
+		{name: "remove-empty(index out of range)", wantErr: true, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: 5}},
+		{name: "remove-empty negative", wantErr: false, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: -3}, want: "b"},
+		{name: "remove-empty negative(index out of range)", wantErr: true, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: -5}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
+				remaining:   tt.fields.remaining,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
@@ -140,11 +136,10 @@ func TestIterator_ElementAt(t *testing.T) {
 
 func TestIterator_Next(t *testing.T) {
 	type fields struct {
-		buf         map[int]string
+		front       []string
+		back        []string
+		remaining   string
 		sep         string
-		s           string
-		head        int
-		tail        int
 		sepLen      int
 		removeEmpty bool
 	}
@@ -154,18 +149,17 @@ func TestIterator_Next(t *testing.T) {
 		wantItem string
 		wantOk   bool
 	}{
-		{name: "", wantItem: "abc", wantOk: true, fields: fields{buf: make(map[int]string), sep: " ", s: "abc def", head: 0, tail: 0, sepLen: 1, removeEmpty: false}},
-		{name: "", wantItem: "def", wantOk: true, fields: fields{buf: map[int]string{1: "abc"}, sep: " ", s: "def", head: 1, tail: 0, sepLen: 1, removeEmpty: false}},
-		{name: "", wantItem: "", wantOk: false, fields: fields{buf: map[int]string{1: "abc", 2: "def"}, sep: " ", s: "", head: 2, tail: 0, sepLen: 1, removeEmpty: false}},
+		{name: "first element", wantItem: "abc", wantOk: true, fields: fields{front: []string{}, remaining: "abc def", sep: " ", sepLen: 1, removeEmpty: false}},
+		{name: "second element", wantItem: "def", wantOk: true, fields: fields{front: []string{"abc"}, remaining: "def", sep: " ", sepLen: 1, removeEmpty: false}},
+		{name: "no more elements", wantItem: "", wantOk: false, fields: fields{front: []string{"abc", "def"}, remaining: "", sep: " ", sepLen: 1, removeEmpty: false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
+				remaining:   tt.fields.remaining,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
@@ -182,11 +176,10 @@ func TestIterator_Next(t *testing.T) {
 
 func TestIterator_Last(t *testing.T) {
 	type fields struct {
-		buf         map[int]string
+		front       []string
+		back        []string
+		remaining   string
 		sep         string
-		s           string
-		head        int
-		tail        int
 		sepLen      int
 		removeEmpty bool
 	}
@@ -196,18 +189,17 @@ func TestIterator_Last(t *testing.T) {
 		wantItem string
 		wantOk   bool
 	}{
-		{name: "", wantItem: "def", wantOk: true, fields: fields{buf: make(map[int]string), sep: " ", s: "abc def", head: 0, tail: 0, sepLen: 1, removeEmpty: false}},
-		{name: "", wantItem: "abc", wantOk: true, fields: fields{buf: map[int]string{1: "abc"}, sep: " ", s: "abc", head: 0, tail: 1, sepLen: 1, removeEmpty: false}},
-		{name: "", wantItem: "", wantOk: false, fields: fields{buf: map[int]string{-2: "abc", -1: "def"}, sep: " ", s: "", head: 0, tail: 2, sepLen: 1, removeEmpty: false}},
+		{name: "last element", wantItem: "def", wantOk: true, fields: fields{back: []string{}, remaining: "abc def", sep: " ", sepLen: 1, removeEmpty: false}},
+		{name: "second to last", wantItem: "abc", wantOk: true, fields: fields{back: []string{"def"}, remaining: "abc", sep: " ", sepLen: 1, removeEmpty: false}},
+		{name: "no more elements", wantItem: "", wantOk: false, fields: fields{back: []string{"def", "abc"}, remaining: "", sep: " ", sepLen: 1, removeEmpty: false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
+				remaining:   tt.fields.remaining,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
@@ -224,11 +216,10 @@ func TestIterator_Last(t *testing.T) {
 
 func TestIterator_ToArray(t *testing.T) {
 	type fields struct {
-		buf         map[int]string
+		front       []string
+		back        []string
+		remaining   string
 		sep         string
-		s           string
-		head        int
-		tail        int
 		sepLen      int
 		removeEmpty bool
 	}
@@ -237,17 +228,16 @@ func TestIterator_ToArray(t *testing.T) {
 		fields fields
 		want   []string
 	}{
-		{name: "", fields: fields{buf: map[int]string{1: "a", 2: "b", -1: "g"}, s: "c d e f", sep: " ", sepLen: 1, head: 2, tail: -1}, want: []string{"a", "b", "c", "d", "e", "f", "g"}},
-		{name: "", fields: fields{buf: map[int]string{1: "a", 2: "b", -1: "g"}, s: "", sep: " ", sepLen: 1, head: 2, tail: -1}, want: []string{"a", "b", "g"}},
+		{name: "front + remaining + back", fields: fields{front: []string{"a", "b"}, back: []string{"g"}, remaining: "c d e f", sep: " ", sepLen: 1}, want: []string{"a", "b", "c", "d", "e", "f", "g"}},
+		{name: "front + back only", fields: fields{front: []string{"a", "b"}, back: []string{"g"}, remaining: "", sep: " ", sepLen: 1}, want: []string{"a", "b", "g"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
+				remaining:   tt.fields.remaining,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
