@@ -3,13 +3,15 @@ package column
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/internal/option"
-	"github.com/xztaityozx/sel/internal/output"
+	"io"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/internal/option"
+	"github.com/xztaityozx/sel/internal/output"
 )
 
 func TestNewRangeSelector(t *testing.T) {
@@ -100,4 +102,49 @@ func TestRangeSelector_Select(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, strings.Join(cols, " "), w.String())
 	})
+}
+
+func BenchmarkRangeSelector_Select_Forward(b *testing.B) {
+	var cols []string
+	for i := 0; i < 100; i++ {
+		cols = append(cols, fmt.Sprintf("%d", i))
+	}
+	rs := NewRangeSelector(1, 1, 100, false)
+	opt := option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		writer := output.NewWriter(opt, io.Discard, false)
+		_ = rs.Select(writer, &testEnumerable{a: cols})
+		_ = writer.Flush()
+	}
+}
+
+func BenchmarkRangeSelector_Select_Backward(b *testing.B) {
+	var cols []string
+	for i := 0; i < 100; i++ {
+		cols = append(cols, fmt.Sprintf("%d", i))
+	}
+	rs := NewRangeSelector(100, -1, 1, false)
+	opt := option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		writer := output.NewWriter(opt, io.Discard, false)
+		_ = rs.Select(writer, &testEnumerable{a: cols})
+		_ = writer.Flush()
+	}
+}
+
+func BenchmarkRangeSelector_Select_Step(b *testing.B) {
+	var cols []string
+	for i := 0; i < 100; i++ {
+		cols = append(cols, fmt.Sprintf("%d", i))
+	}
+	rs := NewRangeSelector(1, 3, 100, false)
+	opt := option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		writer := output.NewWriter(opt, io.Discard, false)
+		_ = rs.Select(writer, &testEnumerable{a: cols})
+		_ = writer.Flush()
+	}
 }
