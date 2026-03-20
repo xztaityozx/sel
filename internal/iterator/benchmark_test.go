@@ -172,6 +172,22 @@ func BenchmarkPreSplitByRegexpIterator_ToArray(b *testing.B) {
 	}
 }
 
+func BenchmarkRegexpIterator_ElementAt_Negative_VaryingColumns(b *testing.B) {
+	lines := []string{
+		"a b c",
+		"a b c d e f g h i j",
+		"x y",
+		strings.Repeat("col ", 20),
+	}
+	iter := NewRegexpIterator("", regexpSep, false)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		line := lines[i%len(lines)]
+		iter.Reset(line)
+		_, _ = iter.ElementAt(-1)
+	}
+}
+
 // Compare strings.Split vs regexp.Split
 func BenchmarkStringsSplit(b *testing.B) {
 	for i := 0; i < b.N; i++ {

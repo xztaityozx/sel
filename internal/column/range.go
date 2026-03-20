@@ -65,43 +65,32 @@ func (r RangeSelector) normalizeRange(m int) (start, stop, step int) {
 
 // selectForward は start < stop の場合の選択処理
 func (r RangeSelector) selectForward(w *output.Writer, strings []string, start, stop, step int) error {
-	// 容量を計算: (stop - start) / step + 1
-	// ただし i == 0 を含む場合は全要素分を加算
-	capacity := (stop - start) / step + 1
-	if start <= 0 && stop >= 0 {
-		// 0 がレンジに含まれる場合、その分だけ追加容量が必要
-		capacity += len(strings) - 1 // 0の1カウント分を引いて全要素分を加算
-	}
-
-	rt := make([]string, 0, capacity)
 	for i := start; i <= stop; i += step {
 		if i == 0 {
-			rt = append(rt, strings...)
+			if err := w.Write(strings...); err != nil {
+				return err
+			}
 		} else {
-			rt = append(rt, strings[i-1])
+			if err := w.Write(strings[i-1]); err != nil {
+				return err
+			}
 		}
 	}
-
-	return w.Write(rt...)
+	return nil
 }
 
 // selectBackward は start > stop の場合の選択処理
 func (r RangeSelector) selectBackward(w *output.Writer, strings []string, start, stop, step int) error {
-	// 容量を計算: (start - stop) / (-step) + 1
-	capacity := (start - stop) / (-step) + 1
-	if stop <= 0 && start >= 0 {
-		// 0 がレンジに含まれる場合
-		capacity += len(strings) - 1
-	}
-
-	rt := make([]string, 0, capacity)
 	for i := start; i >= stop; i += step {
 		if i == 0 {
-			rt = append(rt, strings...)
+			if err := w.Write(strings...); err != nil {
+				return err
+			}
 		} else {
-			rt = append(rt, strings[i-1])
+			if err := w.Write(strings[i-1]); err != nil {
+				return err
+			}
 		}
 	}
-
-	return w.Write(rt...)
+	return nil
 }

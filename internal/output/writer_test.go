@@ -3,10 +3,13 @@ package output
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/xztaityozx/sel/internal/option"
+	"io"
 	"strings"
 	"testing"
+	"text/template"
 )
 
 func TestNewWriter(t *testing.T) {
@@ -64,5 +67,41 @@ func TestWriter_Write(t *testing.T) {
 
 			assert.Equal(t, strings.Join(cols, "d"), buf.String())
 		})
+	}
+}
+
+func BenchmarkWriter_Write(b *testing.B) {
+	w := NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, io.Discard, false)
+	cols := []string{"a", "b", "c", "d", "e"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = w.Write(cols...)
+		_ = w.WriteNewLine()
+	}
+}
+
+func BenchmarkWriter_WriteNewLine_Template(b *testing.B) {
+	// テンプレート: "{} {} {} {} {}" → "{{ index . 0 }} {{ index . 1 }} ..."
+	tmplStr := ""
+	for i := 0; i < 5; i++ {
+		if i > 0 {
+			tmplStr += " "
+		}
+		tmplStr += fmt.Sprintf("{{ index . %d }}", i)
+	}
+	tmpl := template.Must(template.New("bench").Parse(tmplStr))
+
+	w := &Writer{
+		delimiter:      []byte(" "),
+		buf:            bufio.NewWriter(io.Discard),
+		outputTemplate: tmpl,
+		column:         []string{},
+	}
+
+	cols := []string{"a", "b", "c", "d", "e"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = w.Write(cols...)
+		_ = w.WriteNewLine()
 	}
 }
