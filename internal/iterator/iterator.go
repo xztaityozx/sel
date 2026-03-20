@@ -266,12 +266,10 @@ type RegexpIterator struct {
 	sep *regexp.Regexp
 	// オリジナルの文字列
 	s string
-	// 切り出した先頭
-	head int
-	// 切り出した末尾
-	tail int
-	// 切り出し結果を保持しておくmap
-	buf map[int]string
+	// 前方から分割した結果 (index 0 = 1番目の要素)
+	front []string
+	// 後方から分割した結果 (index 0 = 最後の要素 = -1)
+	back []string
 	// 長さ0の文字列を要素に含めるかどうか
 	removeEmpty bool
 	// 最終的な分割結果。ToArray したときだけ書かれる
@@ -284,71 +282,80 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 	}
 
 	if idx > 0 {
-		if r.head >= idx {
-			return r.buf[idx], nil
+		// 正のインデックス: front スライスを使用
+		if idx <= len(r.front) {
+			return r.front[idx-1], nil
 		}
 
-		for _, ok := r.Next(); ok && r.head <= idx; _, ok = r.Next() {
-		}
-
-		if r.head >= idx {
-			return r.buf[idx], nil
-		}
-
-		if r.head+(-r.tail) >= idx {
-			if s, ok := r.buf[idx-r.head+r.tail-1]; ok {
-				r.buf[idx] = s
-				return s, nil
+		// 足りなければ Next() で追加分割
+		for len(r.front) < idx {
+			if _, ok := r.Next(); !ok {
+				break
 			}
 		}
 
-		return "", errors.New(IndexOutOfRange)
-	} else {
-		// 負のインデックス指定されたとき
-		// rightmostなIndexの検索ができないので残りの文字列をすべて分割してしまう
-		// パフォーマンス的にネック
-		if r.tail <= idx {
-			return r.buf[idx], nil
+		if idx <= len(r.front) {
+			return r.front[idx-1], nil
 		}
 
-		if r.s != "" {
-			res := make([]string, 0)
-			for m := r.sep.FindReaderIndex(r.r); m != nil; m = r.sep.FindReaderIndex(r.r) {
-				s := r.s
-
-				a := s[:m[0]]
-				r.s = s[m[0]+len(s[m[0]:m[1]]):]
-				r.r.Reset(r.s)
-
-				if r.removeEmpty && a == "" {
-					continue
-				}
-
-				r.tail--
-				res = append(res, a)
-			}
-
-			if r.s != "" {
-				res = append(res, r.s)
-				r.s = ""
-			}
-
-			for i, v := range res {
-				r.buf[-len(res)+i] = v
-			}
-		}
-
-		if item, ok := r.buf[idx]; ok {
-			return item, nil
-		}
-
-		if s, ok := r.buf[idx-r.tail+r.head+1]; ok {
-			r.buf[idx] = s
-			return s, nil
+		// front + back の合計で到達可能かチェック
+		total := len(r.front) + len(r.back)
+		if idx <= total {
+			backIdx := idx - len(r.front) - 1
+			return r.back[len(r.back)-1-backIdx], nil
 		}
 
 		return "", errors.New(IndexOutOfRange)
 	}
+
+	// 負のインデックス: 残りの文字列をすべて分割してから返す
+	absIdx := -idx // -1 -> 1, -2 -> 2, ...
+	if absIdx <= len(r.back) {
+		return r.back[absIdx-1], nil
+	}
+
+	// 残りの文字列をすべて分割して back に格納
+	if r.s != "" {
+		res := make([]string, 0, 16)
+		for m := r.sep.FindReaderIndex(r.r); m != nil; m = r.sep.FindReaderIndex(r.r) {
+			s := r.s
+
+			a := s[:m[0]]
+			r.s = s[m[0]+len(s[m[0]:m[1]]):]
+			r.r.Reset(r.s)
+
+			if r.removeEmpty && a == "" {
+				continue
+			}
+
+			res = append(res, a)
+		}
+
+		if r.s != "" {
+			res = append(res, r.s)
+			r.s = ""
+		}
+
+		// res を逆順で back に追加（back[0] = 最後の要素）
+		for i := len(res) - 1; i >= 0; i-- {
+			r.back = append(r.back, res[i])
+		}
+	}
+
+	if absIdx <= len(r.back) {
+		return r.back[absIdx-1], nil
+	}
+
+	// front + back の合計で到達可能かチェック
+	total := len(r.front) + len(r.back)
+	if absIdx <= total {
+		frontIdx := len(r.front) - (absIdx - len(r.back))
+		if frontIdx >= 0 && frontIdx < len(r.front) {
+			return r.front[frontIdx], nil
+		}
+	}
+
+	return "", errors.New(IndexOutOfRange)
 }
 
 func (r *RegexpIterator) Next() (item string, ok bool) {
@@ -360,8 +367,7 @@ func (r *RegexpIterator) Next() (item string, ok bool) {
 
 	m := r.sep.FindReaderIndex(r.r)
 	if m == nil {
-		r.head++
-		r.buf[r.head] = s
+		r.front = append(r.front, s)
 		r.s = ""
 		return s, true
 	}
@@ -374,8 +380,7 @@ func (r *RegexpIterator) Next() (item string, ok bool) {
 		return r.Next()
 	}
 
-	r.head++
-	r.buf[r.head] = a
+	r.front = append(r.front, a)
 
 	return a, true
 }
@@ -389,16 +394,15 @@ func (r *RegexpIterator) ToArray() []string {
 		return r.a
 	}
 
+	// 残りをすべて Next() で分割
 	for _, ok := r.Next(); ok; _, ok = r.Next() {
 	}
 
-	a := make([]string, r.head+(-r.tail))
-	for i := 1; i <= r.head; i++ {
-		a[i-1] = r.buf[i]
-	}
-
-	for i := -1; i >= r.tail; i-- {
-		a[r.head-i+1] = r.buf[i]
+	// front + back(逆順) を結合
+	a := make([]string, 0, len(r.front)+len(r.back))
+	a = append(a, r.front...)
+	for j := len(r.back) - 1; j >= 0; j-- {
+		a = append(a, r.back[j])
 	}
 
 	r.a = a
@@ -409,8 +413,8 @@ func (r *RegexpIterator) ToArray() []string {
 func (r *RegexpIterator) Reset(s string) {
 	r.s = s
 	r.r.Reset(s)
-	r.head = 0
-	r.tail = 0
+	r.front = r.front[:0]
+	r.back = r.back[:0]
 	r.a = nil
 }
 
@@ -419,13 +423,13 @@ func (r *RegexpIterator) ResetFromArray(_ []string) {
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
+	const initialCap = 16
 	return &RegexpIterator{
 		r:           strings.NewReader(s),
 		sep:         sep,
 		s:           s,
-		head:        0,
-		tail:        0,
-		buf:         make(map[int]string, 20),
+		front:       make([]string, 0, initialCap),
+		back:        make([]string, 0, initialCap),
 		removeEmpty: re,
 	}
 }

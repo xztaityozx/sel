@@ -269,8 +269,8 @@ func TestNewRegexpIterator(t *testing.T) {
 			as.Equal(tt.args.s, got.s)
 			as.Equal(tt.args.sep, got.sep)
 			as.NotNil(got.r)
-			as.Equal(0, got.head)
-			as.Equal(0, got.tail)
+			as.Equal(0, len(got.front))
+			as.Equal(0, len(got.back))
 		})
 	}
 }
@@ -280,9 +280,8 @@ func TestRegexpIterator_Reset(t *testing.T) {
 		r           *strings.Reader
 		sep         *regexp.Regexp
 		s           string
-		head        int
-		tail        int
-		buf         map[int]string
+		front       []string
+		back        []string
 		removeEmpty bool
 		a           []string
 	}
@@ -294,7 +293,7 @@ func TestRegexpIterator_Reset(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		{name: "", fields: fields{r: strings.NewReader("a b c d e"), buf: make(map[int]string), sep: regexp.MustCompile(`\d+`), s: "a b c d", head: 100, tail: 1000, removeEmpty: false, a: []string{"a"}}, args: args{s: "1 2 3 4"}},
+		{name: "", fields: fields{r: strings.NewReader("a b c d e"), sep: regexp.MustCompile(`\d+`), s: "a b c d", front: []string{"a", "b"}, back: []string{"d", "c"}, removeEmpty: false, a: []string{"a"}}, args: args{s: "1 2 3 4"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -302,17 +301,16 @@ func TestRegexpIterator_Reset(t *testing.T) {
 				r:           tt.fields.r,
 				sep:         tt.fields.sep,
 				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
 				removeEmpty: tt.fields.removeEmpty,
 				a:           tt.fields.a,
 			}
 
 			r.Reset(tt.args.s)
 
-			assert.Equal(t, 0, r.head)
-			assert.Equal(t, 0, r.tail)
+			assert.Equal(t, 0, len(r.front))
+			assert.Equal(t, 0, len(r.back))
 			assert.Equal(t, tt.args.s, r.s)
 			assert.Nil(t, r.a)
 		})
@@ -324,9 +322,8 @@ func TestRegexpIterator_ToArray(t *testing.T) {
 		r           *strings.Reader
 		sep         *regexp.Regexp
 		s           string
-		head        int
-		tail        int
-		buf         map[int]string
+		front       []string
+		back        []string
 		removeEmpty bool
 		a           []string
 	}
@@ -337,17 +334,17 @@ func TestRegexpIterator_ToArray(t *testing.T) {
 	}{
 		{
 			name:   `split by \d+`,
-			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d+`), s: "a11b22c33d44e", head: 0, tail: 0, buf: make(map[int]string), removeEmpty: false, a: nil},
+			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d+`), s: "a11b22c33d44e", front: []string{}, back: []string{}, removeEmpty: false, a: nil},
 			want:   []string{"a", "b", "c", "d", "e"},
 		},
 		{
 			name:   `split by \d(no remove-empty)`,
-			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d`), s: "a11b22c33d44e", head: 0, tail: 0, buf: make(map[int]string), removeEmpty: false, a: nil},
+			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d`), s: "a11b22c33d44e", front: []string{}, back: []string{}, removeEmpty: false, a: nil},
 			want:   []string{"a", "", "b", "", "c", "", "d", "", "e"},
 		},
 		{
 			name:   `split by \d(remove-empty)`,
-			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d`), s: "a11b22c33d44e", head: 0, tail: 0, buf: make(map[int]string), removeEmpty: true, a: nil},
+			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d`), s: "a11b22c33d44e", front: []string{}, back: []string{}, removeEmpty: true, a: nil},
 			want:   []string{"a", "b", "c", "d", "e"},
 		},
 	}
@@ -357,9 +354,8 @@ func TestRegexpIterator_ToArray(t *testing.T) {
 				r:           tt.fields.r,
 				sep:         tt.fields.sep,
 				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
 				removeEmpty: tt.fields.removeEmpty,
 				a:           tt.fields.a,
 			}
@@ -383,9 +379,8 @@ func TestRegexpIterator_Next(t *testing.T) {
 		r           *strings.Reader
 		sep         *regexp.Regexp
 		s           string
-		head        int
-		tail        int
-		buf         map[int]string
+		front       []string
+		back        []string
 		removeEmpty bool
 		a           []string
 	}
@@ -401,9 +396,8 @@ func TestRegexpIterator_Next(t *testing.T) {
 				s:           "a11b22c33d44e",
 				r:           strings.NewReader("a11b22c33d44e"),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        0,
-				tail:        0,
-				buf:         map[int]string{},
+				front:       []string{},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
@@ -416,9 +410,8 @@ func TestRegexpIterator_Next(t *testing.T) {
 				s:           "b22c33d44e",
 				r:           strings.NewReader("b22c33d44e"),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        1,
-				tail:        0,
-				buf:         map[int]string{1: "a"},
+				front:       []string{"a"},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
@@ -431,9 +424,8 @@ func TestRegexpIterator_Next(t *testing.T) {
 				s:           "",
 				r:           strings.NewReader(""),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        5,
-				tail:        0,
-				buf:         map[int]string{1: "a", 2: "b", 3: "c", 4: "d", 5: "e"},
+				front:       []string{"a", "b", "c", "d", "e"},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
@@ -447,9 +439,8 @@ func TestRegexpIterator_Next(t *testing.T) {
 				r:           tt.fields.r,
 				sep:         tt.fields.sep,
 				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
 				removeEmpty: tt.fields.removeEmpty,
 				a:           tt.fields.a,
 			}
@@ -469,9 +460,8 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 		r           *strings.Reader
 		sep         *regexp.Regexp
 		s           string
-		head        int
-		tail        int
-		buf         map[int]string
+		front       []string
+		back        []string
 		removeEmpty bool
 		a           []string
 	}
@@ -491,9 +481,8 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 				s:           "a11b22c33d44e",
 				r:           strings.NewReader("a11b22c33d44e"),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        0,
-				tail:        0,
-				buf:         map[int]string{},
+				front:       []string{},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
@@ -507,9 +496,8 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 				s:           "a11b22c33d44e",
 				r:           strings.NewReader("a11b22c33d44e"),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        0,
-				tail:        0,
-				buf:         map[int]string{},
+				front:       []string{},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
@@ -523,9 +511,8 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 				s:           "a11b22c33d44e",
 				r:           strings.NewReader("a11b22c33d44e"),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        0,
-				tail:        0,
-				buf:         map[int]string{},
+				front:       []string{},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
@@ -539,15 +526,59 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 				s:           "a11b22c33d44e",
 				r:           strings.NewReader("a11b22c33d44e"),
 				sep:         regexp.MustCompile(`\d+`),
-				head:        0,
-				tail:        0,
-				buf:         map[int]string{},
+				front:       []string{},
+				back:        []string{},
 				removeEmpty: false,
 				a:           nil,
 			},
 			args:    args{idx: -5},
 			want:    "a",
 			wantErr: false,
+		},
+		{
+			name: "index out of range (idx=0)",
+			fields: fields{
+				s:           "a11b22c33d44e",
+				r:           strings.NewReader("a11b22c33d44e"),
+				sep:         regexp.MustCompile(`\d+`),
+				front:       []string{},
+				back:        []string{},
+				removeEmpty: false,
+				a:           nil,
+			},
+			args:    args{idx: 0},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "正のインデックスが範囲外",
+			fields: fields{
+				s:           "a11b22c33d44e",
+				r:           strings.NewReader("a11b22c33d44e"),
+				sep:         regexp.MustCompile(`\d+`),
+				front:       []string{},
+				back:        []string{},
+				removeEmpty: false,
+				a:           nil,
+			},
+			args:    args{idx: 100},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "負のインデックスが範囲外",
+			fields: fields{
+				s:           "a11b22c33d44e",
+				r:           strings.NewReader("a11b22c33d44e"),
+				sep:         regexp.MustCompile(`\d+`),
+				front:       []string{},
+				back:        []string{},
+				removeEmpty: false,
+				a:           nil,
+			},
+			args:    args{idx: -100},
+			want:    "",
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -556,9 +587,8 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 				r:           tt.fields.r,
 				sep:         tt.fields.sep,
 				s:           tt.fields.s,
-				head:        tt.fields.head,
-				tail:        tt.fields.tail,
-				buf:         tt.fields.buf,
+				front:       tt.fields.front,
+				back:        tt.fields.back,
 				removeEmpty: tt.fields.removeEmpty,
 				a:           tt.fields.a,
 			}
