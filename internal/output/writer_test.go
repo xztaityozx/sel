@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/internal/option"
 	"io"
 	"strings"
 	"testing"
 	"text/template"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/xztaityozx/sel/internal/option"
 )
 
 func TestNewWriter(t *testing.T) {
