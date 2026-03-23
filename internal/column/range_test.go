@@ -111,11 +111,11 @@ func BenchmarkRangeSelector_Select_Forward(b *testing.B) {
 	}
 	rs := NewRangeSelector(1, 1, 100, false)
 	opt := option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}
+	writer := output.NewWriter(opt, io.Discard, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		writer := output.NewWriter(opt, io.Discard, false)
 		_ = rs.Select(writer, &testEnumerable{a: cols})
-		_ = writer.Flush()
+		_ = writer.WriteNewLine()
 	}
 }
 
@@ -126,11 +126,11 @@ func BenchmarkRangeSelector_Select_Backward(b *testing.B) {
 	}
 	rs := NewRangeSelector(100, -1, 1, false)
 	opt := option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}
+	writer := output.NewWriter(opt, io.Discard, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		writer := output.NewWriter(opt, io.Discard, false)
 		_ = rs.Select(writer, &testEnumerable{a: cols})
-		_ = writer.Flush()
+		_ = writer.WriteNewLine()
 	}
 }
 
@@ -141,10 +141,10 @@ func BenchmarkRangeSelector_Select_Step(b *testing.B) {
 	}
 	rs := NewRangeSelector(1, 3, 100, false)
 	opt := option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}
+	writer := output.NewWriter(opt, io.Discard, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		writer := output.NewWriter(opt, io.Discard, false)
 		_ = rs.Select(writer, &testEnumerable{a: cols})
-		_ = writer.Flush()
+		_ = writer.WriteNewLine()
 	}
 }
