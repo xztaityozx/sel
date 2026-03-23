@@ -50,6 +50,18 @@ func NewIEnumerable(option option.Option) (IEnumerable, error) {
 	}
 }
 
+// resetStringSlice はスライスを長さ0にリセットする。
+// 容量が shrinkThreshold を超えている場合は nil を返し、backing array を GC 可能にする。
+// それ以外の場合は [:0] で容量を維持して再利用する。
+const shrinkThreshold = 64
+
+func resetStringSlice(s []string) []string {
+	if cap(s) > shrinkThreshold {
+		return nil
+	}
+	return s[:0]
+}
+
 func removeEmpty(s []string) []string {
 	a := make([]string, 0, len(s))
 	for _, v := range s {
@@ -87,9 +99,8 @@ func (i *Iterator) String() string {
 // Reset はこのイテレーターをリセットする
 func (i *Iterator) Reset(s string) {
 	i.remaining = s
-	// スライスをクリアするが、容量は維持
-	i.front = i.front[:0]
-	i.back = i.back[:0]
+	i.front = resetStringSlice(i.front)
+	i.back = resetStringSlice(i.back)
 	i.a = nil
 }
 
@@ -413,8 +424,8 @@ func (r *RegexpIterator) ToArray() []string {
 func (r *RegexpIterator) Reset(s string) {
 	r.s = s
 	r.r.Reset(s)
-	r.front = r.front[:0]
-	r.back = r.back[:0]
+	r.front = resetStringSlice(r.front)
+	r.back = resetStringSlice(r.back)
 	r.a = nil
 }
 
