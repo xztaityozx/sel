@@ -18,6 +18,15 @@ type Writer struct {
 
 var newLine = []byte("\n")
 
+const shrinkThreshold = 64
+
+func resetStringSlice(s []string) []string {
+	if cap(s) > shrinkThreshold {
+		return nil
+	}
+	return s[:0]
+}
+
 func NewWriter(option option.Option, w io.Writer, autoFlush bool) *Writer {
 	return &Writer{
 		delimiter:      []byte(option.OutPutDelimiter),
@@ -76,7 +85,7 @@ func (w *Writer) WriteNewLine() error {
 		if err != nil {
 			return err
 		}
-		w.column = w.column[:0]
+		w.column = resetStringSlice(w.column)
 	}
 
 	w.writtenColumns = 0
