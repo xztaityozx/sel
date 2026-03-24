@@ -173,10 +173,19 @@ func run(input *os.File, option option.Option, w *output.Writer, selectors []col
 		return w.Flush()
 	}
 
-	scan := bufio.NewScanner(input)
-	for scan.Scan() {
-		iter.Reset(scan.Text())
-		if err := selectAll(&iter, w, selectors); err != nil {
+	reader := bufio.NewReader(input)
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			iter.Reset(strings.TrimRight(line, "\n"))
+			if err := selectAll(&iter, w, selectors); err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			return err
 		}
 	}
