@@ -33,6 +33,10 @@ type DelimiterOption struct {
 	UseRegexp bool
 	// --split-before
 	SplitBefore bool
+	// --ignore-missing
+	IgnoreMissing bool
+	// --fill-missing
+	FillMissing string
 }
 
 // InputFiles is setting for -f, --input-files option
@@ -85,9 +89,12 @@ const (
 	NameFieldSplit      = "field-split"
 	NameCsv             = "csv"
 	NameTsv             = "tsv"
+	NameIgnoreMissing   = "ignore-missing"
+	NameFillMissing     = "fill-missing"
 	NameTemplate        = "template"
 
-	DefaultTemplate = ""
+	DefaultFillMissing = ""
+	DefaultTemplate    = ""
 )
 
 type SplitStrategy int
@@ -100,6 +107,8 @@ func GetOptionNames() []string {
 		NameUseRegexp,
 		NameRemoveEmpty,
 		NameSplitBefore,
+		NameIgnoreMissing,
+		NameFillMissing,
 		NameFieldSplit,
 		NameCsv,
 		NameTsv,
@@ -145,6 +154,9 @@ func NewOption(v *viper.Viper) (Option, error) {
 		}
 	}
 
+	fillMissing := v.GetString(NameFillMissing)
+	ignoreMissing := v.GetBool(NameIgnoreMissing) || fillMissing != DefaultFillMissing
+
 	return Option{
 		DelimiterOption: DelimiterOption{
 			InputDelimiter:  inputDelimiter,
@@ -152,6 +164,8 @@ func NewOption(v *viper.Viper) (Option, error) {
 			RemoveEmpty:     v.GetBool(NameRemoveEmpty),
 			UseRegexp:       useRegexp,
 			SplitBefore:     v.GetBool(NameSplitBefore),
+			IgnoreMissing:   ignoreMissing,
+			FillMissing:     fillMissing,
 		},
 		InputFiles: InputFiles{v.GetStringSlice(NameInputFiles)},
 		Xsv: Xsv{

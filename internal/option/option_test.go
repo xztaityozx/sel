@@ -99,6 +99,8 @@ func TestGetOptionNames(t *testing.T) {
 			option.NameUseRegexp,
 			option.NameRemoveEmpty,
 			option.NameSplitBefore,
+			option.NameIgnoreMissing,
+			option.NameFillMissing,
 			option.NameFieldSplit,
 			option.NameCsv,
 			option.NameTsv,

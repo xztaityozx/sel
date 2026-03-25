@@ -81,6 +81,8 @@ func init() {
 	rootCmd.Flags().BoolP(option.NameUseRegexp, "g", false, "use regular expressions for input delimiter")
 	rootCmd.Flags().BoolP(option.NameSplitBefore, "S", false, "split all column before select")
 	rootCmd.Flags().BoolP(option.NameFieldSplit, "a", false, "shorthand for -gd '\\s+'")
+	rootCmd.Flags().BoolP(option.NameIgnoreMissing, "M", false, "output empty string for out-of-range columns instead of error")
+	rootCmd.Flags().StringP(option.NameFillMissing, "E", option.DefaultFillMissing, "fill value for out-of-range columns (implies -M)")
 	rootCmd.Flags().Bool(option.NameCsv, false, "parse input file as CSV")
 	rootCmd.Flags().Bool(option.NameTsv, false, "parse input file as TSV")
 	rootCmd.Flags().StringP(option.NameTemplate, "t", option.DefaultTemplate, "template for output")
@@ -148,6 +150,11 @@ func run(input *os.File, option option.Option, w *output.Writer, selectors []col
 		return err
 	}
 
+	var fillMissing *string
+	if option.IgnoreMissing {
+		fillMissing = &option.FillMissing
+	}
+
 	if ok, comma := option.IsXsv(); ok {
 		r := csv.NewReader(input)
 		r.Comma = comma
@@ -165,7 +172,7 @@ func run(input *os.File, option option.Option, w *output.Writer, selectors []col
 
 			iter.ResetFromArray(record)
 
-			if err := selectAll(&iter, w, selectors); err != nil {
+			if err := selectAll(&iter, w, selectors, fillMissing); err != nil {
 				return err
 			}
 		}
@@ -178,7 +185,7 @@ func run(input *os.File, option option.Option, w *output.Writer, selectors []col
 		line, err := reader.ReadString('\n')
 		if len(line) > 0 {
 			iter.Reset(strings.TrimRight(line, "\n"))
-			if err := selectAll(&iter, w, selectors); err != nil {
+			if err := selectAll(&iter, w, selectors, fillMissing); err != nil {
 				return err
 			}
 		}
@@ -193,10 +200,18 @@ func run(input *os.File, option option.Option, w *output.Writer, selectors []col
 	return w.Flush()
 }
 
-func selectAll(iter *iterator.IEnumerable, w *output.Writer, selectors []column.Selector) error {
+func selectAll(iter *iterator.IEnumerable, w *output.Writer, selectors []column.Selector, fillMissing *string) error {
 	for _, selector := range selectors {
 		err := selector.Select(w, *iter)
 		if err != nil {
+			if fillMissing != nil && err.Error() == iterator.IndexOutOfRange {
+				if *fillMissing != "" {
+					if werr := w.Write(*fillMissing); werr != nil {
+						return werr
+					}
+				}
+				continue
+			}
 			return err
 		}
 	}
