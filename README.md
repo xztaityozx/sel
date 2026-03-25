@@ -73,7 +73,9 @@ Available Commands:
 Flags:
       --csv                       parse input file as CSV
   -a, --field-split               shorthand for -gd '\s+'
+  -E, --fill-missing string       fill value for out-of-range columns (implies -M)
   -h, --help                      help for sel
+  -M, --ignore-missing            output empty string for out-of-range columns instead of error
   -d, --input-delimiter string    sets field delimiter(input) (default " ")
   -f, --input-files strings       input files
   -D, --output-delimiter string   sets field delimiter(output) (default " ")
@@ -85,7 +87,6 @@ Flags:
   -v, --version                   version for sel
 
 Use "sel [command] --help" for more information about a command.
-
 ```
 
 # Features
