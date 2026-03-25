@@ -41,11 +41,12 @@ func Test_E2E(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name           string
-		input          input
-		expectedStdout []string
-		expectedStderr []string
-		expectedError  error
+		name            string
+		input           input
+		expectedStdout  []string
+		expectedStderr  []string
+		expectedError   error
+		expectExitError bool
 	}{
 		{
 			name: "sel 1 to be 1..10",
@@ -535,6 +536,74 @@ func Test_E2E(t *testing.T) {
 			expectedError:  nil,
 		},
 		{
+			name: "sel 5 with 3 columns exits with error",
+			input: input{
+				args:  []string{"5"},
+				stdin: []string{"a b c"},
+			},
+			expectExitError: true,
+		},
+		{
+			name: "sel -M 5 with 3 columns outputs empty line",
+			input: input{
+				args:  []string{"-M", "5"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{""},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -M 3 with mixed column counts",
+			input: input{
+				args:  []string{"-M", "3"},
+				stdin: []string{"a b c", "d e", "f g h"},
+			},
+			expectedStdout: []string{"c", "", "h"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -M 1 2 5 with 3 columns outputs partial results",
+			input: input{
+				args:  []string{"-M", "1", "2", "5"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"a b"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -E N/A 5 with 3 columns outputs N/A",
+			input: input{
+				args:  []string{"-E", "N/A", "5"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"N/A"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -E N/A 1 2 5 with 3 columns outputs a b N/A",
+			input: input{
+				args:  []string{"-E", "N/A", "1", "2", "5"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"a b N/A"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -E - 3 with mixed column counts",
+			input: input{
+				args:  []string{"-E", "-", "3"},
+				stdin: []string{"a b c", "d e", "f g h"},
+			},
+			expectedStdout: []string{"c", "-", "h"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
 			name: "sel -- -10::2 prints 17 18 19 20, 37 38 39 40, 57 58 59 60, 77 78 79 80, 97 98 99 100",
 			input: input{
 				args: []string{"--", "-10::2"},
@@ -561,9 +630,12 @@ func Test_E2E(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			stdout, stderr, err := runSel(selPath, testcase.input.args, testcase.input.stdin)
-			if testcase.expectedError != nil {
+			if testcase.expectExitError {
+				as.Error(err, "エラーで終了するべき")
+			} else if testcase.expectedError != nil {
 				as.Equal(err, testcase.expectedError, "エラー内容が一致するべき")
 			} else {
+				as.NoError(err, "エラーなしで終了するべき")
 				as.Equal(testcase.expectedStdout, stdout, "標準出力が一致するべき")
 				as.Equal(testcase.expectedStderr, stderr, "標準エラー出力が一致するべき")
 			}
