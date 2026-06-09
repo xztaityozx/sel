@@ -1,8 +1,6 @@
 module github.com/xztaityozx/sel
 
-go 1.23.0
-
-toolchain go1.24.0
+go 1.26.4
 
 require (
 	github.com/spf13/cobra v1.10.2
