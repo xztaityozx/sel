@@ -134,7 +134,7 @@ func TestIterator_ElementAt(t *testing.T) {
 	}
 }
 
-func TestIterator_Next(t *testing.T) {
+func TestIterator_next(t *testing.T) {
 	type fields struct {
 		front       []string
 		back        []string
@@ -163,18 +163,18 @@ func TestIterator_Next(t *testing.T) {
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
-			gotItem, gotOk := i.Next()
+			gotItem, gotOk := i.next()
 			if gotItem != tt.wantItem {
-				t.Errorf("Next() gotItem = %v, want %v", gotItem, tt.wantItem)
+				t.Errorf("next() gotItem = %v, want %v", gotItem, tt.wantItem)
 			}
 			if gotOk != tt.wantOk {
-				t.Errorf("Next() gotOk = %v, want %v", gotOk, tt.wantOk)
+				t.Errorf("next() gotOk = %v, want %v", gotOk, tt.wantOk)
 			}
 		})
 	}
 }
 
-func TestIterator_Last(t *testing.T) {
+func TestIterator_last(t *testing.T) {
 	type fields struct {
 		front       []string
 		back        []string
@@ -203,12 +203,12 @@ func TestIterator_Last(t *testing.T) {
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
-			gotItem, gotOk := i.Last()
+			gotItem, gotOk := i.last()
 			if gotItem != tt.wantItem {
-				t.Errorf("Last() gotItem = %v, want %v", gotItem, tt.wantItem)
+				t.Errorf("last() gotItem = %v, want %v", gotItem, tt.wantItem)
 			}
 			if gotOk != tt.wantOk {
-				t.Errorf("Last() gotOk = %v, want %v", gotOk, tt.wantOk)
+				t.Errorf("last() gotOk = %v, want %v", gotOk, tt.wantOk)
 			}
 		})
 	}
@@ -366,15 +366,7 @@ func TestRegexpIterator_ToArray(t *testing.T) {
 	}
 }
 
-func TestRegexpIterator_Last(t *testing.T) {
-	r := &RegexpIterator{}
-
-	assert.Panics(t, func() {
-		r.Last()
-	})
-}
-
-func TestRegexpIterator_Next(t *testing.T) {
+func TestRegexpIterator_next(t *testing.T) {
 	type fields struct {
 		r           *strings.Reader
 		sep         *regexp.Regexp
@@ -444,12 +436,12 @@ func TestRegexpIterator_Next(t *testing.T) {
 				removeEmpty: tt.fields.removeEmpty,
 				a:           tt.fields.a,
 			}
-			gotItem, gotOk := r.Next()
+			gotItem, gotOk := r.next()
 			if gotItem != tt.wantItem {
-				t.Errorf("Next() gotItem = %v, want %v", gotItem, tt.wantItem)
+				t.Errorf("next() gotItem = %v, want %v", gotItem, tt.wantItem)
 			}
 			if gotOk != tt.wantOk {
-				t.Errorf("Next() gotOk = %v, want %v", gotOk, tt.wantOk)
+				t.Errorf("next() gotOk = %v, want %v", gotOk, tt.wantOk)
 			}
 		})
 	}
@@ -604,7 +596,7 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 	}
 }
 
-func TestNewIEnumerable(t *testing.T) {
+func TestNewSplitColumns(t *testing.T) {
 	as := assert.New(t)
 	type args struct {
 		option option.Option
@@ -612,7 +604,7 @@ func TestNewIEnumerable(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wants   IEnumerable
+		wants   splitColumns
 		wantErr bool
 	}{
 		{
@@ -637,26 +629,6 @@ func TestNewIEnumerable(t *testing.T) {
 				},
 			},
 			NewPreSplitIterator("", "", false),
-			false,
-		},
-		{
-			"to be PreSplitIterator for CSV",
-			args{
-				option.Option{
-					Xsv: option.Xsv{Csv: true, Tsv: false},
-				},
-			},
-			NewPreSplitIterator("", ",", false),
-			false,
-		},
-		{
-			"to be PreSplitIterator for Tsv",
-			args{
-				option.Option{
-					Xsv: option.Xsv{Csv: false, Tsv: true},
-				},
-			},
-			NewPreSplitIterator("", "\t", false),
 			false,
 		},
 		{
@@ -703,7 +675,7 @@ func TestNewIEnumerable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewIEnumerable(tt.args.option)
+			got, err := newSplitColumns(tt.args.option)
 			if tt.wantErr {
 				as.Error(err)
 			} else {

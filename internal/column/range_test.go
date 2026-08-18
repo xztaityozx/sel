@@ -64,7 +64,7 @@ func TestRangeSelector_Select(t *testing.T) {
 			rs := NewRangeSelector(v.start, v.step, v.stop, false)
 			expect := expectFactory(v.expects)
 			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
-			err := rs.Select(writer, &testEnumerable{a: cols})
+			err := rs.Select(writer, &testColumns{a: cols})
 			assert.Nil(t, writer.Flush())
 			assert.Nil(t, err)
 			assert.Equal(t, strings.Join(expect, " "), w.String(), "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
@@ -86,7 +86,7 @@ func TestRangeSelector_Select(t *testing.T) {
 		for _, v := range dataset {
 			rs := NewRangeSelector(v.start, v.step, v.stop, false)
 			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
-			err := rs.Select(writer, &testEnumerable{a: cols})
+			err := rs.Select(writer, &testColumns{a: cols})
 			assert.Nil(t, writer.Flush())
 			assert.NotNil(t, err)
 			assert.Equal(t, 0, len(w.String()))
@@ -97,7 +97,7 @@ func TestRangeSelector_Select(t *testing.T) {
 	t.Run("Inf", func(t *testing.T) {
 		rs := NewRangeSelector(1, 1, 1, true)
 		writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
-		err := rs.Select(writer, &testEnumerable{a: cols})
+		err := rs.Select(writer, &testColumns{a: cols})
 		assert.Nil(t, writer.Flush())
 		assert.Nil(t, err)
 		assert.Equal(t, strings.Join(cols, " "), w.String())
@@ -114,7 +114,7 @@ func BenchmarkRangeSelector_Select_Forward(b *testing.B) {
 	writer := output.NewWriter(opt, io.Discard, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = rs.Select(writer, &testEnumerable{a: cols})
+		_ = rs.Select(writer, &testColumns{a: cols})
 		_ = writer.WriteNewLine()
 	}
 }
@@ -129,7 +129,7 @@ func BenchmarkRangeSelector_Select_Backward(b *testing.B) {
 	writer := output.NewWriter(opt, io.Discard, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = rs.Select(writer, &testEnumerable{a: cols})
+		_ = rs.Select(writer, &testColumns{a: cols})
 		_ = writer.WriteNewLine()
 	}
 }
@@ -144,7 +144,7 @@ func BenchmarkRangeSelector_Select_Step(b *testing.B) {
 	writer := output.NewWriter(opt, io.Discard, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = rs.Select(writer, &testEnumerable{a: cols})
+		_ = rs.Select(writer, &testColumns{a: cols})
 		_ = writer.WriteNewLine()
 	}
 }

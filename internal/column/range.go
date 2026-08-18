@@ -18,7 +18,7 @@ func NewRangeSelector(start, step, stop int, isInfStop bool) RangeSelector {
 	return RangeSelector{start: start, step: step, stop: stop, isInfStop: isInfStop}
 }
 
-func (r RangeSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
+func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	strings := iter.ToArray()
 	m := len(strings)
 
