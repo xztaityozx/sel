@@ -1,15 +1,14 @@
 package iterator
 
 import (
-  "errors"
+	"errors"
 	"regexp"
 	"strings"
 )
 
+// PreSplitIterator は先に全カラムへ分割してしまう Columns
 type PreSplitIterator struct {
 	a           []string
-	head        int
-	tail        int
 	sep         string
 	reg         *regexp.Regexp
 	l           int
@@ -31,55 +30,27 @@ func (p *PreSplitIterator) ElementAt(idx int) (string, error) {
 	return p.a[idx-1], nil
 }
 
-func (p *PreSplitIterator) Next() (item string, ok bool) {
-	if p.l <= p.head {
-		return "", false
-	}
-
-	if -p.l >= p.tail {
-		return "", false
-	}
-
-	a := p.a[p.head]
-	p.head++
-	return a, true
-}
-
-func (p *PreSplitIterator) Last() (item string, ok bool) {
-	if -p.l >= p.tail {
-		return "", false
-	}
-
-	if p.l <= p.head {
-		return "", false
-	}
-
-	a := p.a[p.l+p.tail-1]
-	p.tail--
-	return a, true
-}
-
 func (p *PreSplitIterator) ToArray() []string {
 	return p.a
 }
 
 func (p *PreSplitIterator) Reset(s string) {
 	if p.reg == nil {
-		p.ResetFromArray(strings.Split(s, p.sep))
+		p.resetFromArray(strings.Split(s, p.sep))
 	} else {
-		p.ResetFromArray(p.reg.Split(s, -1))
+		p.resetFromArray(p.reg.Split(s, -1))
 	}
 }
 
-func (p *PreSplitIterator) ResetFromArray(a []string) {
+// resetFromArray は分割済みの配列をそのままカラム列として受け取る。
+// encoding/csv のように分割済みのレコードが手に入る入力で使う
+func (p *PreSplitIterator) resetFromArray(a []string) {
 	if p.removeEmpty {
 		p.a = removeEmpty(a)
 	} else {
 		p.a = a
 	}
 
-	p.tail = 0
-	p.head = 0
 	p.l = len(p.a)
 }
 
@@ -91,8 +62,6 @@ func NewPreSplitIterator(s, sep string, re bool) *PreSplitIterator {
 	p := &PreSplitIterator{
 		a:           a,
 		sep:         sep,
-		head:        0,
-		tail:        0,
 		removeEmpty: re,
 	}
 	p.l = len(p.a)
@@ -108,8 +77,6 @@ func NewPreSplitByRegexpIterator(s string, reg *regexp.Regexp, re bool) *PreSpli
 	p := &PreSplitIterator{
 		a:           a,
 		reg:         reg,
-		head:        0,
-		tail:        0,
 		removeEmpty: re,
 	}
 	p.l = len(p.a)

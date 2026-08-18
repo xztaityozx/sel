@@ -42,10 +42,14 @@ golangci-lint run
    - `RangeSelector` - Range with optional step (Python slice notation)
    - `SwitchSelector` - Regex-based range selection with +N/-N context support
 
-3. **Iterators** (`internal/iterator/`) - Line splitting strategies via `IEnumerable` interface:
-   - `Iterator` - On-demand string splitting
-   - `RegexpIterator` - Regex-based splitting
-   - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
+3. **Iterators** (`internal/iterator/`) - Split into two interfaces:
+   - `Source` - Supplies one `Columns` per line/record, `io.EOF` at the end. `cmd/root.go` drives this loop
+     - `lineSource` - Reads lines with `bufio` and hands them to a splitting `Columns`
+     - `csvSource` - Reads records with `encoding/csv` (already split)
+   - `Columns` - Per-line column view (`ElementAt` / `ToArray`). The only thing `Selector` sees
+     - `Iterator` - On-demand string splitting
+     - `RegexpIterator` - Regex-based splitting
+     - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
 
 4. **Output** (`internal/output/`) - `Writer` handles delimiter joining and template-based output
 
