@@ -21,12 +21,6 @@ type splitColumns interface {
 	Reset(s string)
 }
 
-var (
-	_ splitColumns = (*Iterator)(nil)
-	_ splitColumns = (*RegexpIterator)(nil)
-	_ splitColumns = (*PreSplitIterator)(nil)
-)
-
 // newSplitColumns は option.Option から適切な splitColumns を生成して返す
 func newSplitColumns(option option.Option) (splitColumns, error) {
 	if option.UseRegexp {
