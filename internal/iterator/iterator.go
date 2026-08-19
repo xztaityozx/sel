@@ -1,54 +1,11 @@
 package iterator
 
 import (
-  "errors"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/xztaityozx/sel/internal/option"
 )
-
-type IEnumerable interface {
-	ElementAt(idx int) (string, error)
-	Next() (item string, ok bool)
-	Last() (item string, ok bool)
-	ToArray() []string
-	Reset(s string)
-	ResetFromArray(a []string)
-}
-
-// NewIEnumerable は option.Option から適切な IEnumerable を生成して返す
-func NewIEnumerable(option option.Option) (IEnumerable, error) {
-
-	if ok, comma := option.IsXsv(); ok {
-		// CSV/TSVの時はencoding/csvが分割をしてくれるので、NewPreSplitIteratorを使えばよい
-		return NewPreSplitIterator("", string(comma), option.RemoveEmpty), nil
-	}
-
-	if option.UseRegexp {
-		r, err := regexp.Compile(option.InputDelimiter)
-		if err != nil {
-			return nil, err
-		}
-
-		if option.SplitBefore {
-			// 事前に分割する。選択しないカラムも分割するが、後半のカラムを選択するときにはこちらが有利
-			return NewPreSplitByRegexpIterator("", r, option.RemoveEmpty), nil
-		} else {
-			// 欲しいところまでの分割を都度行う。前の方にあるindexを選ぶほど有利
-			// 負のindexを指定する場合は、末尾まで分割してから返すような実装なので、実行速度が低下してしまうことに注意
-			// もしかしたら肯定先読みとか使えば後ろからsplitできたりする？
-			return NewRegexpIterator("", r, option.RemoveEmpty), nil
-		}
-	} else {
-		if option.SplitBefore {
-			return NewPreSplitIterator("", option.InputDelimiter, option.RemoveEmpty), nil
-		} else {
-			return NewIterator("", option.InputDelimiter, option.RemoveEmpty), nil
-		}
-	}
-}
 
 // resetStringSlice はスライスを長さ0にリセットする。
 // 容量が shrinkThreshold を超えている場合は nil を返し、backing array を GC 可能にする。
@@ -116,9 +73,9 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 			return i.front[idx-1], nil
 		}
 
-		// 足りなければ Next() で追加分割
+		// 足りなければ next() で追加分割
 		for len(i.front) < idx {
-			if _, ok := i.Next(); !ok {
+			if _, ok := i.next(); !ok {
 				break
 			}
 		}
@@ -144,9 +101,9 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 		return i.back[absIdx-1], nil
 	}
 
-	// 足りなければ Last() で追加分割
+	// 足りなければ last() で追加分割
 	for len(i.back) < absIdx {
-		if _, ok := i.Last(); !ok {
+		if _, ok := i.last(); !ok {
 			break
 		}
 	}
@@ -168,8 +125,8 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 	return "", errors.New(IndexOutOfRange)
 }
 
-// Next は先頭から次の要素を取り出す
-func (i *Iterator) Next() (item string, ok bool) {
+// next は先頭から次の要素を取り出す
+func (i *Iterator) next() (item string, ok bool) {
 	s := i.remaining
 
 	if s == "" {
@@ -187,15 +144,15 @@ func (i *Iterator) Next() (item string, ok bool) {
 	i.remaining = s[m+i.sepLen:]
 
 	if i.removeEmpty && a == "" {
-		return i.Next()
+		return i.next()
 	}
 
 	i.front = append(i.front, a)
 	return a, true
 }
 
-// Last は末尾から要素を取り出す
-func (i *Iterator) Last() (item string, ok bool) {
+// last は末尾から要素を取り出す
+func (i *Iterator) last() (item string, ok bool) {
 	s := i.remaining
 
 	if s == "" {
@@ -213,7 +170,7 @@ func (i *Iterator) Last() (item string, ok bool) {
 	i.remaining = s[:m]
 
 	if i.removeEmpty && a == "" {
-		return i.Last()
+		return i.last()
 	}
 
 	i.back = append(i.back, a)
@@ -250,10 +207,6 @@ func (i *Iterator) ToArray() []string {
 
 	i.a = a
 	return a
-}
-
-func (i *Iterator) ResetFromArray(_ []string) {
-	panic("not impl")
 }
 
 func NewIterator(s, sep string, removeEmpty bool) *Iterator {
@@ -298,9 +251,9 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			return r.front[idx-1], nil
 		}
 
-		// 足りなければ Next() で追加分割
+		// 足りなければ next() で追加分割
 		for len(r.front) < idx {
-			if _, ok := r.Next(); !ok {
+			if _, ok := r.next(); !ok {
 				break
 			}
 		}
@@ -369,7 +322,8 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 	return "", errors.New(IndexOutOfRange)
 }
 
-func (r *RegexpIterator) Next() (item string, ok bool) {
+// next は先頭から次の要素を取り出す
+func (r *RegexpIterator) next() (item string, ok bool) {
 	s := r.s
 
 	if s == "" {
@@ -388,7 +342,7 @@ func (r *RegexpIterator) Next() (item string, ok bool) {
 	r.r.Reset(r.s)
 
 	if r.removeEmpty && a == "" {
-		return r.Next()
+		return r.next()
 	}
 
 	r.front = append(r.front, a)
@@ -396,17 +350,13 @@ func (r *RegexpIterator) Next() (item string, ok bool) {
 	return a, true
 }
 
-func (r *RegexpIterator) Last() (item string, ok bool) {
-	panic("not implement Last() for RegexpIterator")
-}
-
 func (r *RegexpIterator) ToArray() []string {
 	if r.a != nil {
 		return r.a
 	}
 
-	// 残りをすべて Next() で分割
-	for _, ok := r.Next(); ok; _, ok = r.Next() {
+	// 残りをすべて next() で分割
+	for _, ok := r.next(); ok; _, ok = r.next() {
 	}
 
 	// front + back(逆順) を結合
@@ -427,10 +377,6 @@ func (r *RegexpIterator) Reset(s string) {
 	r.front = resetStringSlice(r.front)
 	r.back = resetStringSlice(r.back)
 	r.a = nil
-}
-
-func (r *RegexpIterator) ResetFromArray(_ []string) {
-	panic("not impl")
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {

@@ -23,7 +23,7 @@ func NewIndexSelectorFromString(str string, def int) (IndexSelector, error) {
 	return NewIndexSelector(num), err
 }
 
-func (i IndexSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
+func (i IndexSelector) Select(w *output.Writer, iter iterator.Columns) error {
 
 	if i.index == 0 {
 		return w.Write(iter.ToArray()...)

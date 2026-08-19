@@ -6,5 +6,5 @@ import (
 )
 
 type Selector interface {
-	Select(w *output.Writer, iterator iterator.IEnumerable) error
+	Select(w *output.Writer, columns iterator.Columns) error
 }

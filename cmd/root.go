@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"bufio"
-	"encoding/csv"
-	"github.com/xztaityozx/sel/internal/iterator"
-	"github.com/xztaityozx/sel/internal/output"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -13,7 +10,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xztaityozx/sel/internal/column"
+	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/option"
+	"github.com/xztaityozx/sel/internal/output"
 	"github.com/xztaityozx/sel/internal/parser"
 )
 
@@ -138,61 +137,33 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 }
 
 // run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
-func run(input *os.File, option option.Option, w *output.Writer, selectors []column.Selector) error {
+func run(input *os.File, opt option.Option, w *output.Writer, selectors []column.Selector) error {
 	defer func(input *os.File) {
 		if err := input.Close(); err != nil {
 			log.Fatalln(err)
 		}
 	}(input)
 
-	iter, err := iterator.NewIEnumerable(option)
+	src, err := iterator.NewSource(opt, input)
 	if err != nil {
 		return err
 	}
 
 	var fillMissing *string
-	if option.IgnoreMissing {
-		fillMissing = &option.FillMissing
+	if opt.IgnoreMissing {
+		fillMissing = &opt.FillMissing
 	}
 
-	if ok, comma := option.IsXsv(); ok {
-		r := csv.NewReader(input)
-		r.Comma = comma
-
-		var record []string
-		var csvReadError error
-		for {
-			record, csvReadError = r.Read()
-			if csvReadError != nil && csvReadError != io.EOF {
-				return csvReadError
-			}
-			if csvReadError == io.EOF {
-				break
-			}
-
-			iter.ResetFromArray(record)
-
-			if err := selectAll(&iter, w, selectors, fillMissing); err != nil {
-				return err
-			}
-		}
-
-		return w.Flush()
-	}
-
-	reader := bufio.NewReader(input)
 	for {
-		line, err := reader.ReadString('\n')
-		if len(line) > 0 {
-			iter.Reset(strings.TrimRight(line, "\n"))
-			if err := selectAll(&iter, w, selectors, fillMissing); err != nil {
-				return err
-			}
-		}
+		columns, err := src.Next()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
+			return err
+		}
+
+		if err := selectAll(columns, w, selectors, fillMissing); err != nil {
 			return err
 		}
 	}
@@ -200,9 +171,9 @@ func run(input *os.File, option option.Option, w *output.Writer, selectors []col
 	return w.Flush()
 }
 
-func selectAll(iter *iterator.IEnumerable, w *output.Writer, selectors []column.Selector, fillMissing *string) error {
+func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, fillMissing *string) error {
 	for _, selector := range selectors {
-		err := selector.Select(w, *iter)
+		err := selector.Select(w, columns)
 		if err != nil {
 			if fillMissing != nil && err.Error() == iterator.IndexOutOfRange {
 				if *fillMissing != "" {

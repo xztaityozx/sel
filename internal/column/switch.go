@@ -55,7 +55,7 @@ func abs(a int) int {
 }
 
 // Select はクエリに従ってカラムを選択する
-func (s SwitchSelector) Select(w *output.Writer, iter iterator.IEnumerable) error {
+func (s SwitchSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	// isAroundContextなときは、配列の最大長が必要になるので、最初に全部分割してしまう
 	strings := iter.ToArray()
 	maximum := len(strings)
