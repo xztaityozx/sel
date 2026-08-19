@@ -16,11 +16,6 @@ type Source interface {
 	Next() (Columns, error)
 }
 
-var (
-	_ Source = (*lineSource)(nil)
-	_ Source = (*csvSource)(nil)
-)
-
 // NewSource は option.Option に従って input から Columns を供給する Source を作る
 func NewSource(option option.Option, input io.Reader) (Source, error) {
 	if ok, comma := option.IsXsv(); ok {
