@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -18,27 +18,34 @@ import (
 
 var Version string = "undefined"
 
+// stdinSourceName は標準入力から読んでいるときにエラーメッセージで使うソース名
+const stdinSourceName = "<stdin>"
+
 var rootCmd = &cobra.Command{
 	Use:   "sel [queries...]",
 	Short: "select column",
 	Long: `
-          _ 
+          _
  ___  ___| |
 / __|/ _ \ |
 \__ \  __/ |
 |___/\___|_|
 
 __sel__ect column`,
-	Args:    cobra.MinimumNArgs(1),
-	Version: Version,
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:          cobra.MinimumNArgs(1),
+	Version:       Version,
+	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// ここから先は実行時エラーなので、Usage は出さない（引数のパースエラーはこの手前で弾かれる）
+		cmd.SilenceUsage = true
+
 		opt, err := option.NewOption(viper.GetViper())
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 		selectors, err := parser.Parse(args)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		w := output.NewWriter(opt, os.Stdout, false)
@@ -46,29 +53,30 @@ __sel__ect column`,
 		if len(opt.Files) != 0 {
 			files, err := opt.Enumerate()
 			if err != nil {
-				log.Fatalln(err)
+				return err
 			}
 
 			for _, file := range files {
-				if fp, err := os.Open(file); err != nil {
-					log.Fatalln(err)
-				} else {
-					if err := run(fp, opt, w, selectors); err != nil {
-						log.Fatalln(err)
-					}
+				fp, err := os.Open(file)
+				if err != nil {
+					return err
+				}
+				if err := run(fp, file, opt, w, selectors, args); err != nil {
+					return err
 				}
 			}
-		} else {
-			if err := run(os.Stdin, opt, w, selectors); err != nil {
-				log.Fatalln(err)
-			}
+
+			return nil
 		}
+
+		return run(os.Stdin, stdinSourceName, opt, w, selectors, args)
 	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatalln(err)
+		fmt.Fprintln(os.Stderr, "sel:", err)
+		os.Exit(1)
 	}
 }
 
@@ -136,12 +144,29 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `)
 }
 
+// positionError はエラーに発生位置（入力元・行番号・クエリ）を付与する
+type positionError struct {
+	source string
+	line   int
+	query  string
+	err    error
+}
+
+func (e *positionError) Error() string {
+	if e.query != "" {
+		return fmt.Sprintf("%s:%d: query %q: %s", e.source, e.line, e.query, e.err)
+	}
+	return fmt.Sprintf("%s:%d: %s", e.source, e.line, e.err)
+}
+
+func (e *positionError) Unwrap() error { return e.err }
+
 // run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
-func run(input *os.File, opt option.Option, w *output.Writer, selectors []column.Selector) error {
+// source はエラーメッセージに出す入力元の名前（ファイルパスか stdinSourceName）
+// queries は selectors と同じ順番のクエリ文字列で、エラーの発生位置を表すのに使う
+func run(input *os.File, source string, opt option.Option, w *output.Writer, selectors []column.Selector, queries []string) error {
 	defer func(input *os.File) {
-		if err := input.Close(); err != nil {
-			log.Fatalln(err)
-		}
+		_ = input.Close()
 	}(input)
 
 	src, err := iterator.NewSource(opt, input)
@@ -154,37 +179,58 @@ func run(input *os.File, opt option.Option, w *output.Writer, selectors []column
 		fillMissing = &opt.FillMissing
 	}
 
+	line := 0
 	for {
 		columns, err := src.Next()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return err
+			return &positionError{source: source, line: line + 1, err: err}
 		}
+		line++
 
-		if err := selectAll(columns, w, selectors, fillMissing); err != nil {
-			return err
+		if err := selectAll(columns, w, selectors, queries, fillMissing); err != nil {
+			return &positionError{source: source, line: line, query: err.query, err: err.err}
 		}
 	}
 
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return &positionError{source: source, line: line, err: err}
+	}
+
+	return nil
 }
 
-func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, fillMissing *string) error {
-	for _, selector := range selectors {
+// selectError は selectAll 内でどのクエリが失敗したかを保持する
+type selectError struct {
+	query string
+	err   error
+}
+
+func (e *selectError) Error() string { return e.err.Error() }
+func (e *selectError) Unwrap() error { return e.err }
+
+func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, queries []string, fillMissing *string) *selectError {
+	for i, selector := range selectors {
 		err := selector.Select(w, columns)
 		if err != nil {
-			if fillMissing != nil && err.Error() == iterator.IndexOutOfRange {
+			if fillMissing != nil && iterator.IsIndexOutOfRange(err) {
 				if *fillMissing != "" {
 					if werr := w.Write(*fillMissing); werr != nil {
-						return werr
+						return &selectError{query: queries[i], err: werr}
 					}
 				}
 				continue
 			}
-			return err
+			if iterator.IsIndexOutOfRange(err) {
+				err = fmt.Errorf("line has only %d columns", len(columns.ToArray()))
+			}
+			return &selectError{query: queries[i], err: err}
 		}
 	}
-	return w.WriteNewLine()
+	if err := w.WriteNewLine(); err != nil {
+		return &selectError{err: err}
+	}
+	return nil
 }
