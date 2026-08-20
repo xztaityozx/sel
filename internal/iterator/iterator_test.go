@@ -29,8 +29,8 @@ func TestNewIterator(t *testing.T) {
 			as := assert.New(t)
 
 			as.NotNil(got)
-			as.Equal(tt.args.s, got.remaining)
-			as.Equal(tt.args.sep, got.sep)
+			as.Equal(tt.args.s, string(got.remaining))
+			as.Equal(tt.args.sep, string(got.sep))
 			as.Equal(len(tt.args.sep), len(got.sep))
 			as.Equal(0, len(got.front))
 			as.Equal(0, len(got.back))
@@ -61,21 +61,21 @@ func TestIterator_Reset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				front:       tt.fields.front,
-				back:        tt.fields.back,
-				remaining:   tt.fields.remaining,
-				sep:         tt.fields.sep,
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
+				remaining:   []byte(tt.fields.remaining),
+				sep:         []byte(tt.fields.sep),
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
 
-			i.Reset(tt.args.s)
+			i.Reset([]byte(tt.args.s))
 
 			as := assert.New(t)
-			as.Equal(tt.fields.sep, i.sep)
+			as.Equal(tt.fields.sep, string(i.sep))
 			as.Equal(tt.fields.sepLen, i.sepLen)
 			as.Equal(tt.fields.removeEmpty, i.removeEmpty)
-			as.Equal(tt.args.s, i.remaining)
+			as.Equal(tt.args.s, string(i.remaining))
 			as.Equal(0, len(i.front))
 			as.Equal(0, len(i.back))
 			as.Nil(i.a)
@@ -115,10 +115,10 @@ func TestIterator_ElementAt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				front:       tt.fields.front,
-				back:        tt.fields.back,
-				remaining:   tt.fields.remaining,
-				sep:         tt.fields.sep,
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
+				remaining:   []byte(tt.fields.remaining),
+				sep:         []byte(tt.fields.sep),
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
@@ -127,8 +127,8 @@ func TestIterator_ElementAt(t *testing.T) {
 				t.Errorf("ElementAt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("ElementAt() got = %v, want %v", got, tt.want)
+			if string(got) != tt.want {
+				t.Errorf("ElementAt() got = %s, want %v", got, tt.want)
 			}
 		})
 	}
@@ -156,16 +156,16 @@ func TestIterator_next(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				front:       tt.fields.front,
-				back:        tt.fields.back,
-				remaining:   tt.fields.remaining,
-				sep:         tt.fields.sep,
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
+				remaining:   []byte(tt.fields.remaining),
+				sep:         []byte(tt.fields.sep),
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
 			gotItem, gotOk := i.next()
-			if gotItem != tt.wantItem {
-				t.Errorf("next() gotItem = %v, want %v", gotItem, tt.wantItem)
+			if string(gotItem) != tt.wantItem {
+				t.Errorf("next() gotItem = %s, want %v", gotItem, tt.wantItem)
 			}
 			if gotOk != tt.wantOk {
 				t.Errorf("next() gotOk = %v, want %v", gotOk, tt.wantOk)
@@ -196,16 +196,16 @@ func TestIterator_last(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				front:       tt.fields.front,
-				back:        tt.fields.back,
-				remaining:   tt.fields.remaining,
-				sep:         tt.fields.sep,
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
+				remaining:   []byte(tt.fields.remaining),
+				sep:         []byte(tt.fields.sep),
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
 			gotItem, gotOk := i.last()
-			if gotItem != tt.wantItem {
-				t.Errorf("last() gotItem = %v, want %v", gotItem, tt.wantItem)
+			if string(gotItem) != tt.wantItem {
+				t.Errorf("last() gotItem = %s, want %v", gotItem, tt.wantItem)
 			}
 			if gotOk != tt.wantOk {
 				t.Errorf("last() gotOk = %v, want %v", gotOk, tt.wantOk)
@@ -234,14 +234,14 @@ func TestIterator_ToArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Iterator{
-				front:       tt.fields.front,
-				back:        tt.fields.back,
-				remaining:   tt.fields.remaining,
-				sep:         tt.fields.sep,
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
+				remaining:   []byte(tt.fields.remaining),
+				sep:         []byte(tt.fields.sep),
 				sepLen:      tt.fields.sepLen,
 				removeEmpty: tt.fields.removeEmpty,
 			}
-			if got := i.ToArray(); !reflect.DeepEqual(got, tt.want) {
+			if got := ss(i.ToArray()); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ToArray() = %v, want %v", got, tt.want)
 			}
 		})
@@ -266,9 +266,8 @@ func TestNewRegexpIterator(t *testing.T) {
 			got := NewRegexpIterator(tt.args.s, tt.args.sep, tt.args.re)
 			as := assert.New(t)
 
-			as.Equal(tt.args.s, got.s)
+			as.Equal(tt.args.s, string(got.s))
 			as.Equal(tt.args.sep, got.sep)
-			as.NotNil(got.r)
 			as.Equal(0, len(got.front))
 			as.Equal(0, len(got.back))
 		})
@@ -298,20 +297,19 @@ func TestRegexpIterator_Reset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &RegexpIterator{
-				r:           tt.fields.r,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				front:       tt.fields.front,
-				back:        tt.fields.back,
+				s:           []byte(tt.fields.s),
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
 				removeEmpty: tt.fields.removeEmpty,
-				a:           tt.fields.a,
+				a:           bs(tt.fields.a...),
 			}
 
-			r.Reset(tt.args.s)
+			r.Reset([]byte(tt.args.s))
 
 			assert.Equal(t, 0, len(r.front))
 			assert.Equal(t, 0, len(r.back))
-			assert.Equal(t, tt.args.s, r.s)
+			assert.Equal(t, tt.args.s, string(r.s))
 			assert.Nil(t, r.a)
 		})
 	}
@@ -351,15 +349,14 @@ func TestRegexpIterator_ToArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &RegexpIterator{
-				r:           tt.fields.r,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				front:       tt.fields.front,
-				back:        tt.fields.back,
+				s:           []byte(tt.fields.s),
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
 				removeEmpty: tt.fields.removeEmpty,
-				a:           tt.fields.a,
+				a:           bs(tt.fields.a...),
 			}
-			if got := r.ToArray(); !reflect.DeepEqual(got, tt.want) {
+			if got := ss(r.ToArray()); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ToArray() = %v, want %v", got, tt.want)
 			}
 		})
@@ -428,17 +425,16 @@ func TestRegexpIterator_next(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &RegexpIterator{
-				r:           tt.fields.r,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				front:       tt.fields.front,
-				back:        tt.fields.back,
+				s:           []byte(tt.fields.s),
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
 				removeEmpty: tt.fields.removeEmpty,
-				a:           tt.fields.a,
+				a:           bs(tt.fields.a...),
 			}
 			gotItem, gotOk := r.next()
-			if gotItem != tt.wantItem {
-				t.Errorf("next() gotItem = %v, want %v", gotItem, tt.wantItem)
+			if string(gotItem) != tt.wantItem {
+				t.Errorf("next() gotItem = %s, want %v", gotItem, tt.wantItem)
 			}
 			if gotOk != tt.wantOk {
 				t.Errorf("next() gotOk = %v, want %v", gotOk, tt.wantOk)
@@ -576,21 +572,20 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &RegexpIterator{
-				r:           tt.fields.r,
 				sep:         tt.fields.sep,
-				s:           tt.fields.s,
-				front:       tt.fields.front,
-				back:        tt.fields.back,
+				s:           []byte(tt.fields.s),
+				front:       bs(tt.fields.front...),
+				back:        bs(tt.fields.back...),
 				removeEmpty: tt.fields.removeEmpty,
-				a:           tt.fields.a,
+				a:           bs(tt.fields.a...),
 			}
 			got, err := r.ElementAt(tt.args.idx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ElementAt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("ElementAt() got = %v, want %v", got, tt.want)
+			if string(got) != tt.want {
+				t.Errorf("ElementAt() got = %s, want %v", got, tt.want)
 			}
 		})
 	}

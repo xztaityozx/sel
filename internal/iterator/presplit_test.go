@@ -19,19 +19,19 @@ func TestNewPreSplitByRegexpIterator(t *testing.T) {
 		want *PreSplitIterator
 	}{
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d+`), re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
+			a:           bs("a", "b", "c", "d"),
 			reg:         regexp.MustCompile(`\d+`),
 			l:           4,
 			removeEmpty: false,
 		}},
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d`), re: true}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
+			a:           bs("a", "b", "c", "d"),
 			reg:         regexp.MustCompile(`\d`),
 			l:           4,
 			removeEmpty: true,
 		}},
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d`), re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "", "b", "", "c", "", "d"},
+			a:           bs("a", "", "b", "", "c", "", "d"),
 			reg:         regexp.MustCompile(`\d`),
 			l:           7,
 			removeEmpty: false,
@@ -58,22 +58,22 @@ func TestNewPreSplitIterator(t *testing.T) {
 		want *PreSplitIterator
 	}{
 		{name: "split by space(no remove-empty)", args: args{s: "a b c d", sep: " ", re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
-			sep:         " ",
+			a:           bs("a", "b", "c", "d"),
+			sep:         []byte(" "),
 			reg:         nil,
 			l:           4,
 			removeEmpty: false,
 		}},
 		{name: "split by space(remove-empty)", args: args{s: "a b   c d", sep: " ", re: true}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
-			sep:         " ",
+			a:           bs("a", "b", "c", "d"),
+			sep:         []byte(" "),
 			reg:         nil,
 			l:           4,
 			removeEmpty: true,
 		}},
 		{name: "split by space(remove-empty)", args: args{s: "a b   c d", sep: " ", re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "", "", "c", "d"},
-			sep:         " ",
+			a:           bs("a", "b", "", "", "c", "d"),
+			sep:         []byte(" "),
 			reg:         nil,
 			l:           6,
 			removeEmpty: false,
@@ -107,13 +107,13 @@ func TestPreSplitIterator_ToArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &PreSplitIterator{
-				a:           tt.fields.a,
-				sep:         tt.fields.sep,
+				a:           bs(tt.fields.a...),
+				sep:         []byte(tt.fields.sep),
 				reg:         tt.fields.reg,
 				l:           tt.fields.l,
 				removeEmpty: tt.fields.removeEmpty,
 			}
-			if got := p.ToArray(); !reflect.DeepEqual(got, tt.want) {
+			if got := ss(p.ToArray()); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ToArray() = %v, want %v", got, tt.want)
 			}
 		})
@@ -142,21 +142,21 @@ func TestPreSplitIterator_Reset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &PreSplitIterator{
-				a:           tt.fields.a,
-				sep:         tt.fields.sep,
+				a:           bs(tt.fields.a...),
+				sep:         []byte(tt.fields.sep),
 				reg:         tt.fields.reg,
 				l:           tt.fields.l,
 				removeEmpty: tt.fields.removeEmpty,
 			}
 
-			p.Reset(tt.args.s)
+			p.Reset([]byte(tt.args.s))
 
 			as := assert.New(t)
 			as.Equal(4, p.l)
-			as.Equal([]string{"a", "b", "c", "d"}, p.a)
+			as.Equal(bs("a", "b", "c", "d"), p.a)
 			if p.reg == nil {
 				as.Nil(p.reg)
-				as.Equal(" ", p.sep)
+				as.Equal([]byte(" "), p.sep)
 			} else {
 				as.Equal(regexp.MustCompile(`\d+`), p.reg)
 			}
@@ -193,8 +193,8 @@ func TestPreSplitIterator_ElementAt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &PreSplitIterator{
-				a:           tt.fields.a,
-				sep:         tt.fields.sep,
+				a:           bs(tt.fields.a...),
+				sep:         []byte(tt.fields.sep),
 				reg:         tt.fields.reg,
 				l:           tt.fields.l,
 				removeEmpty: tt.fields.removeEmpty,
@@ -204,7 +204,7 @@ func TestPreSplitIterator_ElementAt(t *testing.T) {
 				t.Errorf("ElementAt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if string(got) != tt.want {
 				t.Errorf("ElementAt() got = %v, want %v", got, tt.want)
 			}
 		})

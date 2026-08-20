@@ -7,12 +7,13 @@ import (
 )
 
 var testLine = strings.Repeat("column ", 100) // 100 columns
+var testLineBytes = []byte(testLine)
 
 func BenchmarkIterator_ElementAt_First(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
 }
@@ -21,7 +22,7 @@ func BenchmarkIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
 }
@@ -30,7 +31,7 @@ func BenchmarkIterator_ElementAt_Last(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(100)
 	}
 }
@@ -39,7 +40,7 @@ func BenchmarkIterator_ElementAt_Negative(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(-1)
 	}
 }
@@ -48,7 +49,7 @@ func BenchmarkIterator_ToArray(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
 }
@@ -57,7 +58,7 @@ func BenchmarkPreSplitIterator_ElementAt_First(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
 }
@@ -66,7 +67,7 @@ func BenchmarkPreSplitIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
 }
@@ -75,7 +76,7 @@ func BenchmarkPreSplitIterator_ElementAt_Last(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(100)
 	}
 }
@@ -84,7 +85,7 @@ func BenchmarkPreSplitIterator_ElementAt_Negative(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(-1)
 	}
 }
@@ -93,7 +94,7 @@ func BenchmarkPreSplitIterator_ToArray(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
 }
@@ -104,7 +105,7 @@ func BenchmarkRegexpIterator_ElementAt_First(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
 }
@@ -113,7 +114,7 @@ func BenchmarkRegexpIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
 }
@@ -122,7 +123,7 @@ func BenchmarkRegexpIterator_ElementAt_Last(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(100)
 	}
 }
@@ -131,7 +132,7 @@ func BenchmarkRegexpIterator_ElementAt_Negative(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(-1)
 	}
 }
@@ -140,7 +141,7 @@ func BenchmarkRegexpIterator_ToArray(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
 }
@@ -149,7 +150,7 @@ func BenchmarkPreSplitByRegexpIterator_ElementAt_First(b *testing.B) {
 	iter := NewPreSplitByRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
 }
@@ -158,7 +159,7 @@ func BenchmarkPreSplitByRegexpIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewPreSplitByRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
 }
@@ -167,17 +168,17 @@ func BenchmarkPreSplitByRegexpIterator_ToArray(b *testing.B) {
 	iter := NewPreSplitByRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
 }
 
 func BenchmarkRegexpIterator_ElementAt_Negative_VaryingColumns(b *testing.B) {
-	lines := []string{
-		"a b c",
-		"a b c d e f g h i j",
-		"x y",
-		strings.Repeat("col ", 20),
+	lines := [][]byte{
+		[]byte("a b c"),
+		[]byte("a b c d e f g h i j"),
+		[]byte("x y"),
+		[]byte(strings.Repeat("col ", 20)),
 	}
 	iter := NewRegexpIterator("", regexpSep, false)
 	b.ResetTimer()

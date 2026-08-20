@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
 	"testing"
 	"text/template"
 
@@ -35,9 +34,9 @@ func TestWriter_Write(t *testing.T) {
 		buf       *bufio.Writer
 	}
 	type args struct {
-		columns []string
+		columns [][]byte
 	}
-	cols := []string{"a", "b", "c"}
+	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c")}
 	buf := &bytes.Buffer{}
 	tests := []struct {
 		name    string
@@ -66,14 +65,14 @@ func TestWriter_Write(t *testing.T) {
 			}
 			_ = w.buf.Flush()
 
-			assert.Equal(t, strings.Join(cols, "d"), buf.String())
+			assert.Equal(t, "adbdc", buf.String())
 		})
 	}
 }
 
 func BenchmarkWriter_Write(b *testing.B) {
 	w := NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, io.Discard, false)
-	cols := []string{"a", "b", "c", "d", "e"}
+	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e")}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = w.Write(cols...)
@@ -99,7 +98,7 @@ func BenchmarkWriter_WriteNewLine_Template(b *testing.B) {
 		column:         []string{},
 	}
 
-	cols := []string{"a", "b", "c", "d", "e"}
+	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e")}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = w.Write(cols...)

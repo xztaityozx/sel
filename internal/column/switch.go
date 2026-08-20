@@ -13,11 +13,11 @@ type address struct {
 	num    int
 }
 
-func (a address) match(s string, index int) bool {
+func (a address) match(b []byte, index int) bool {
 	if a.regexp == nil {
 		return a.num-1 == index
 	} else {
-		return a.regexp.MatchString(s)
+		return a.regexp.Match(b)
 	}
 }
 
@@ -57,8 +57,8 @@ func abs(a int) int {
 // Select はクエリに従ってカラムを選択する
 func (s SwitchSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	// isAroundContextなときは、配列の最大長が必要になるので、最初に全部分割してしまう
-	strings := iter.ToArray()
-	maximum := len(strings)
+	columns := iter.ToArray()
+	maximum := len(columns)
 	minimum := 0
 
 	// スライスの初期容量を見積もる
@@ -82,15 +82,15 @@ func (s SwitchSelector) Select(w *output.Writer, iter iterator.Columns) error {
 		}
 	}
 
-	rt := make([]string, 0, estimatedCap)
+	rt := make([][]byte, 0, estimatedCap)
 	if s.end.isAroundContext {
-		for i, v := range strings {
+		for i, v := range columns {
 			if s.begin.match(v, i) {
 				// マッチした位置から前後どちらかにs.end.num個
 				if s.end.num < 0 {
-					rt = append(rt, strings[between(i+s.end.num, maximum, minimum):between(i+1, maximum, minimum)]...)
+					rt = append(rt, columns[between(i+s.end.num, maximum, minimum):between(i+1, maximum, minimum)]...)
 				} else {
-					rt = append(rt, strings[between(i, maximum, minimum):between(i+s.end.num+1, maximum, minimum)]...)
+					rt = append(rt, columns[between(i, maximum, minimum):between(i+s.end.num+1, maximum, minimum)]...)
 				}
 			}
 		}
@@ -98,7 +98,7 @@ func (s SwitchSelector) Select(w *output.Writer, iter iterator.Columns) error {
 		// isAroundContextじゃないときはクエリにマッチしたとき出力するかどうかを切り替える
 		// s.begin.match()でON、s.end.match()でOFFが切り替わる
 		st := false
-		for i, v := range strings {
+		for i, v := range columns {
 			if st {
 				rt = append(rt, v)
 				if s.end.match(v, i) {
