@@ -6,19 +6,20 @@ import (
 	"github.com/xztaityozx/sel/internal/option"
 )
 
-// Columns は1行ぶんのカラム列を表す。column.Selector が触るのはこのインターフェースだけ
+// Columns は1行ぶんのカラム列を表す。column.Selector が触るのはこのインターフェースだけ。
+// 返される []byte は読み取りバッファ上のスライスなので、次に Source.Next を呼ぶまでしか有効でない
 type Columns interface {
 	// ElementAt は idx 番目のカラムを返す。1-indexed で、負の値は末尾からの位置を表す
-	ElementAt(idx int) (string, error)
+	ElementAt(idx int) ([]byte, error)
 	// ToArray はすべてのカラムを配列にして返す
-	ToArray() []string
+	ToArray() [][]byte
 }
 
-// splitColumns は「1行の文字列」から作り直せる Columns。行を供給する lineSource が使う
+// splitColumns は「1行のバイト列」から作り直せる Columns。行を供給する lineSource が使う
 type splitColumns interface {
 	Columns
-	// Reset は s を新しい1行として受け取り、分割状態を作り直す
-	Reset(s string)
+	// Reset は b を新しい1行として受け取り、分割状態を作り直す
+	Reset(b []byte)
 }
 
 // newSplitColumns は option.Option から適切な splitColumns を生成して返す

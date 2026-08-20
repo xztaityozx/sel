@@ -37,15 +37,18 @@ func NewWriter(option option.Option, w io.Writer, autoFlush bool) *Writer {
 	}
 }
 
-func (w *Writer) Write(columns ...string) error {
+func (w *Writer) Write(columns ...[]byte) error {
 	if len(columns) == 0 {
 		return nil
 	}
 
 	if w.outputTemplate != nil {
 		// テンプレートを使うときは、出力すべきすべてのカラムが揃ってから書き出すので、ここにはバッファに乗せるのみ
-		// 実際の書き込みは WriteNewLine() で行う
-		w.column = append(w.column, columns...)
+		// 実際の書き込みは WriteNewLine() で行う。
+		// text/template に渡すために、ここでだけ文字列へコピーする
+		for _, v := range columns {
+			w.column = append(w.column, string(v))
+		}
 		return nil
 	}
 
@@ -55,7 +58,7 @@ func (w *Writer) Write(columns ...string) error {
 		}
 	}
 
-	if _, err := w.buf.WriteString(columns[0]); err != nil {
+	if _, err := w.buf.Write(columns[0]); err != nil {
 		return err
 	}
 
@@ -63,7 +66,7 @@ func (w *Writer) Write(columns ...string) error {
 		if _, err := w.buf.Write(w.delimiter); err != nil {
 			return err
 		}
-		if _, err := w.buf.WriteString(v); err != nil {
+		if _, err := w.buf.Write(v); err != nil {
 			return err
 		}
 	}
