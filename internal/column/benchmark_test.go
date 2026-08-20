@@ -11,6 +11,7 @@ import (
 )
 
 var testLine = strings.Repeat("column ", 100) // 100 columns
+var testLineBytes = []byte(testLine)
 
 func newTestWriter() *output.Writer {
 	opt := option.Option{
@@ -27,7 +28,7 @@ func BenchmarkIndexSelector_First(b *testing.B) {
 	sel := NewIndexSelector(1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -38,7 +39,7 @@ func BenchmarkIndexSelector_Middle(b *testing.B) {
 	sel := NewIndexSelector(50)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -49,7 +50,7 @@ func BenchmarkIndexSelector_Last(b *testing.B) {
 	sel := NewIndexSelector(100)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -60,7 +61,7 @@ func BenchmarkIndexSelector_Negative(b *testing.B) {
 	sel := NewIndexSelector(-1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -71,7 +72,7 @@ func BenchmarkIndexSelector_Zero(b *testing.B) {
 	sel := NewIndexSelector(0)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -82,7 +83,7 @@ func BenchmarkRangeSelector_Small(b *testing.B) {
 	sel := NewRangeSelector(1, 1, 10, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -93,7 +94,7 @@ func BenchmarkRangeSelector_Large(b *testing.B) {
 	sel := NewRangeSelector(1, 1, 100, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -104,7 +105,7 @@ func BenchmarkRangeSelector_WithStep(b *testing.B) {
 	sel := NewRangeSelector(1, 2, 100, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -115,7 +116,7 @@ func BenchmarkRangeSelector_Infinite(b *testing.B) {
 	sel := NewRangeSelector(1, 1, 1, true)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -126,7 +127,7 @@ func BenchmarkSwitchSelector_Regexp(b *testing.B) {
 	sel, _ := NewSwitchSelector("/col/", "/col/")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -137,7 +138,7 @@ func BenchmarkSwitchSelector_Index(b *testing.B) {
 	sel, _ := NewSwitchSelector("10", "20")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }
@@ -148,7 +149,7 @@ func BenchmarkSwitchSelector_AroundContext(b *testing.B) {
 	sel, _ := NewSwitchSelector("/col/", "+5")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		iter.Reset(testLine)
+		iter.Reset(testLineBytes)
 		_ = sel.Select(w, iter)
 	}
 }

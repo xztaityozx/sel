@@ -177,7 +177,7 @@ func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Se
 		if err != nil {
 			if fillMissing != nil && err.Error() == iterator.IndexOutOfRange {
 				if *fillMissing != "" {
-					if werr := w.Write(*fillMissing); werr != nil {
+					if werr := w.Write([]byte(*fillMissing)); werr != nil {
 						return werr
 					}
 				}

@@ -1,26 +1,26 @@
 package iterator
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 )
 
-// resetStringSlice はスライスを長さ0にリセットする。
+// resetByteSlices はスライスを長さ0にリセットする。
 // 容量が shrinkThreshold を超えている場合は nil を返し、backing array を GC 可能にする。
 // それ以外の場合は [:0] で容量を維持して再利用する。
 const shrinkThreshold = 64
 
-func resetStringSlice(s []string) []string {
+func resetByteSlices(s [][]byte) [][]byte {
 	if cap(s) > shrinkThreshold {
 		return nil
 	}
 	return s[:0]
 }
 
-func removeEmpty(s []string) []string {
-	a := make([]string, 0, len(s))
+func removeEmpty(s [][]byte) [][]byte {
+	a := make([][]byte, 0, len(s))
 	for _, v := range s {
 		if len(v) != 0 {
 			a = append(a, v)
@@ -32,39 +32,39 @@ func removeEmpty(s []string) []string {
 // Iterator は特定の文字で分割するイテレーター
 type Iterator struct {
 	// 前方から分割した結果 (index 0 = 1番目の要素)
-	front []string
+	front [][]byte
 	// 後方から分割した結果 (index 0 = 最後の要素 = -1)
-	back []string
-	// 未分割の残り文字列
-	remaining string
+	back [][]byte
+	// 未分割の残り
+	remaining []byte
 	// 区切り文字
-	sep string
+	sep []byte
 	// 区切り文字列の長さ
 	sepLen int
 	// 長さ0な文字列を要素に含めるかどうか
 	removeEmpty bool
 	// 最終的な分割結果。ToArray したときだけ書かれる
-	a []string
+	a [][]byte
 }
 
 var IndexOutOfRange = "index out of range"
 
 func (i *Iterator) String() string {
-	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\tfront: %v,\n\tback: %v\n\tremaining: '%s'\n}", i.sep, i.sepLen, i.front, i.back, i.remaining)
+	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\tfront: %s,\n\tback: %s\n\tremaining: '%s'\n}", i.sep, i.sepLen, i.front, i.back, i.remaining)
 }
 
 // Reset はこのイテレーターをリセットする
-func (i *Iterator) Reset(s string) {
-	i.remaining = s
-	i.front = resetStringSlice(i.front)
-	i.back = resetStringSlice(i.back)
+func (i *Iterator) Reset(b []byte) {
+	i.remaining = b
+	i.front = resetByteSlices(i.front)
+	i.back = resetByteSlices(i.back)
 	i.a = nil
 }
 
 // ElementAt は指定したインデックスの値を返す。1-indexed
-func (i *Iterator) ElementAt(idx int) (string, error) {
+func (i *Iterator) ElementAt(idx int) ([]byte, error) {
 	if idx == 0 {
-		return "", errors.New(IndexOutOfRange)
+		return nil, errors.New(IndexOutOfRange)
 	}
 
 	if idx > 0 {
@@ -92,7 +92,7 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 			return i.back[len(i.back)-1-backIdx], nil
 		}
 
-		return "", errors.New(IndexOutOfRange)
+		return nil, errors.New(IndexOutOfRange)
 	}
 
 	// 負のインデックス: back スライスを使用
@@ -122,28 +122,28 @@ func (i *Iterator) ElementAt(idx int) (string, error) {
 		}
 	}
 
-	return "", errors.New(IndexOutOfRange)
+	return nil, errors.New(IndexOutOfRange)
 }
 
 // next は先頭から次の要素を取り出す
-func (i *Iterator) next() (item string, ok bool) {
+func (i *Iterator) next() (item []byte, ok bool) {
 	s := i.remaining
 
-	if s == "" {
-		return "", false
+	if len(s) == 0 {
+		return nil, false
 	}
 
-	m := strings.Index(s, i.sep)
+	m := bytes.Index(s, i.sep)
 	if m < 0 {
 		i.front = append(i.front, s)
-		i.remaining = ""
+		i.remaining = nil
 		return s, true
 	}
 
 	a := s[:m]
 	i.remaining = s[m+i.sepLen:]
 
-	if i.removeEmpty && a == "" {
+	if i.removeEmpty && len(a) == 0 {
 		return i.next()
 	}
 
@@ -152,24 +152,24 @@ func (i *Iterator) next() (item string, ok bool) {
 }
 
 // last は末尾から要素を取り出す
-func (i *Iterator) last() (item string, ok bool) {
+func (i *Iterator) last() (item []byte, ok bool) {
 	s := i.remaining
 
-	if s == "" {
-		return "", false
+	if len(s) == 0 {
+		return nil, false
 	}
 
-	m := strings.LastIndex(s, i.sep)
+	m := bytes.LastIndex(s, i.sep)
 	if m < 0 {
 		i.back = append(i.back, s)
-		i.remaining = ""
+		i.remaining = nil
 		return s, true
 	}
 
 	a := s[m+i.sepLen:]
 	i.remaining = s[:m]
 
-	if i.removeEmpty && a == "" {
+	if i.removeEmpty && len(a) == 0 {
 		return i.last()
 	}
 
@@ -177,23 +177,23 @@ func (i *Iterator) last() (item string, ok bool) {
 	return a, true
 }
 
-func (i *Iterator) ToArray() []string {
+func (i *Iterator) ToArray() [][]byte {
 	if i.a != nil {
 		return i.a
 	}
 
 	// front + remaining + back(逆順) を結合
-	var a []string
+	var a [][]byte
 
 	// front をコピー
 	if len(i.front) > 0 {
-		a = make([]string, len(i.front), len(i.front)+len(i.back)+10)
+		a = make([][]byte, len(i.front), len(i.front)+len(i.back)+10)
 		copy(a, i.front)
 	}
 
 	// remaining を分割して追加
-	if i.remaining != "" {
-		b := strings.Split(i.remaining, i.sep)
+	if len(i.remaining) != 0 {
+		b := bytes.Split(i.remaining, i.sep)
 		if i.removeEmpty {
 			b = removeEmpty(b)
 		}
@@ -213,10 +213,10 @@ func NewIterator(s, sep string, removeEmpty bool) *Iterator {
 	// 初期容量を設定（平均的なカラム数を想定）
 	const initialCap = 16
 	return &Iterator{
-		front:       make([]string, 0, initialCap),
-		back:        make([]string, 0, initialCap),
-		remaining:   s,
-		sep:         sep,
+		front:       make([][]byte, 0, initialCap),
+		back:        make([][]byte, 0, initialCap),
+		remaining:   []byte(s),
+		sep:         []byte(sep),
 		sepLen:      len(sep),
 		removeEmpty: removeEmpty,
 	}
@@ -224,25 +224,23 @@ func NewIterator(s, sep string, removeEmpty bool) *Iterator {
 
 // RegexpIterator は正規表現でテキストを分割するイテレーター
 type RegexpIterator struct {
-	// 入力ソース
-	r *strings.Reader
 	// 区切りとなる正規表現
 	sep *regexp.Regexp
-	// オリジナルの文字列
-	s string
+	// 未分割の残り
+	s []byte
 	// 前方から分割した結果 (index 0 = 1番目の要素)
-	front []string
+	front [][]byte
 	// 後方から分割した結果 (index 0 = 最後の要素 = -1)
-	back []string
+	back [][]byte
 	// 長さ0の文字列を要素に含めるかどうか
 	removeEmpty bool
 	// 最終的な分割結果。ToArray したときだけ書かれる
-	a []string
+	a [][]byte
 }
 
-func (r *RegexpIterator) ElementAt(idx int) (string, error) {
+func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 	if idx == 0 {
-		return "", errors.New(IndexOutOfRange)
+		return nil, errors.New(IndexOutOfRange)
 	}
 
 	if idx > 0 {
@@ -269,7 +267,7 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 			return r.back[len(r.back)-1-backIdx], nil
 		}
 
-		return "", errors.New(IndexOutOfRange)
+		return nil, errors.New(IndexOutOfRange)
 	}
 
 	// 負のインデックス: 残りの文字列をすべて分割してから返す
@@ -279,25 +277,22 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 	}
 
 	// 残りの文字列をすべて分割して back に格納
-	if r.s != "" {
-		res := make([]string, 0, 16)
-		for m := r.sep.FindReaderIndex(r.r); m != nil; m = r.sep.FindReaderIndex(r.r) {
-			s := r.s
+	if len(r.s) != 0 {
+		res := make([][]byte, 0, 16)
+		for m := r.sep.FindIndex(r.s); m != nil; m = r.sep.FindIndex(r.s) {
+			a := r.s[:m[0]]
+			r.s = r.s[m[1]:]
 
-			a := s[:m[0]]
-			r.s = s[m[0]+len(s[m[0]:m[1]]):]
-			r.r.Reset(r.s)
-
-			if r.removeEmpty && a == "" {
+			if r.removeEmpty && len(a) == 0 {
 				continue
 			}
 
 			res = append(res, a)
 		}
 
-		if r.s != "" {
+		if len(r.s) != 0 {
 			res = append(res, r.s)
-			r.s = ""
+			r.s = nil
 		}
 
 		// res を逆順で back に追加（back[0] = 最後の要素）
@@ -319,29 +314,28 @@ func (r *RegexpIterator) ElementAt(idx int) (string, error) {
 		}
 	}
 
-	return "", errors.New(IndexOutOfRange)
+	return nil, errors.New(IndexOutOfRange)
 }
 
 // next は先頭から次の要素を取り出す
-func (r *RegexpIterator) next() (item string, ok bool) {
+func (r *RegexpIterator) next() (item []byte, ok bool) {
 	s := r.s
 
-	if s == "" {
-		return "", false
+	if len(s) == 0 {
+		return nil, false
 	}
 
-	m := r.sep.FindReaderIndex(r.r)
+	m := r.sep.FindIndex(s)
 	if m == nil {
 		r.front = append(r.front, s)
-		r.s = ""
+		r.s = nil
 		return s, true
 	}
 
 	a := s[:m[0]]
-	r.s = s[m[0]+len(s[m[0]:m[1]]):]
-	r.r.Reset(r.s)
+	r.s = s[m[1]:]
 
-	if r.removeEmpty && a == "" {
+	if r.removeEmpty && len(a) == 0 {
 		return r.next()
 	}
 
@@ -350,7 +344,7 @@ func (r *RegexpIterator) next() (item string, ok bool) {
 	return a, true
 }
 
-func (r *RegexpIterator) ToArray() []string {
+func (r *RegexpIterator) ToArray() [][]byte {
 	if r.a != nil {
 		return r.a
 	}
@@ -360,7 +354,7 @@ func (r *RegexpIterator) ToArray() []string {
 	}
 
 	// front + back(逆順) を結合
-	a := make([]string, 0, len(r.front)+len(r.back))
+	a := make([][]byte, 0, len(r.front)+len(r.back))
 	a = append(a, r.front...)
 	for j := len(r.back) - 1; j >= 0; j-- {
 		a = append(a, r.back[j])
@@ -371,22 +365,20 @@ func (r *RegexpIterator) ToArray() []string {
 	return a
 }
 
-func (r *RegexpIterator) Reset(s string) {
-	r.s = s
-	r.r.Reset(s)
-	r.front = resetStringSlice(r.front)
-	r.back = resetStringSlice(r.back)
+func (r *RegexpIterator) Reset(b []byte) {
+	r.s = b
+	r.front = resetByteSlices(r.front)
+	r.back = resetByteSlices(r.back)
 	r.a = nil
 }
 
 func NewRegexpIterator(s string, sep *regexp.Regexp, re bool) *RegexpIterator {
 	const initialCap = 16
 	return &RegexpIterator{
-		r:           strings.NewReader(s),
 		sep:         sep,
-		s:           s,
-		front:       make([]string, 0, initialCap),
-		back:        make([]string, 0, initialCap),
+		s:           []byte(s),
+		front:       make([][]byte, 0, initialCap),
+		back:        make([][]byte, 0, initialCap),
 		removeEmpty: re,
 	}
 }
