@@ -2,9 +2,11 @@ package output
 
 import (
 	"bufio"
-	"github.com/xztaityozx/sel/internal/option"
 	"io"
 	"text/template"
+
+	"github.com/xztaityozx/sel/internal/option"
+	"github.com/xztaityozx/sel/internal/sliceutil"
 )
 
 type Writer struct {
@@ -17,15 +19,6 @@ type Writer struct {
 }
 
 var newLine = []byte("\n")
-
-const shrinkThreshold = 64
-
-func resetStringSlice(s []string) []string {
-	if cap(s) > shrinkThreshold {
-		return nil
-	}
-	return s[:0]
-}
 
 func NewWriter(option option.Option, w io.Writer, autoFlush bool) *Writer {
 	return &Writer{
@@ -88,7 +81,7 @@ func (w *Writer) WriteNewLine() error {
 		if err != nil {
 			return err
 		}
-		w.column = resetStringSlice(w.column)
+		w.column = sliceutil.Reset(w.column)
 	}
 
 	w.writtenColumns = 0
