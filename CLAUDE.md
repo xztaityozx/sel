@@ -57,6 +57,7 @@ golangci-lint run
 - **1-indexed columns**: Index `0` returns the entire line (like awk's `$0`)
 - **Negative indices**: `-1` is last column, `-2` is second-to-last
 - **Zero-copy line reading**: columns are `[]byte` all the way from `bufio`'s read buffer to `output.Writer`, so there is no per-line allocation and no `unsafe`. Everything a `Columns` returns points into that buffer and is only valid until the next `Source.Next()` — copy with `bytes.Clone` to keep it longer
+- **Zero-width separator matches are rune boundaries**: they split but never produce an empty column, so an empty separator (literal or regexp) explodes a line into runes (`bytes.Split(b, nil)` / gawk's `FS=""`); invalid UTF-8 bytes become one column each. All four `Columns` implementations must agree here — `TestEmptySeparatorAgreement` pins it
 - **Lazy vs eager splitting**: Default is lazy (efficient for early columns), `-S` flag pre-splits (efficient for later columns)
 - **CSV/TSV mode**: Uses `encoding/csv` for proper quote handling
 

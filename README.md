@@ -93,3 +93,4 @@ Use "sel [command] --help" for more information about a command.
 - one-indexed
 - index `0` refers to the entire line. (like `awk`)
 - slice notation
+- an empty delimiter (`-d ''`, `-g -d ''`) splits a line into runes. (like `gawk`'s `FS=""`)
