@@ -5,9 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"unicode/utf8"
 
 	"github.com/xztaityozx/sel/internal/sliceutil"
 )
+
+// 区切りについての約束ごと:
+//
+// 幅0の区切りマッチは UTF-8 のルーン境界を表す。分割はするが空カラムは作らない。
+// したがって空の区切り(リテラル・正規表現とも)は行をルーン単位に分割する。
+// これは bytes.Split(b, []byte{}) や gawk の FS="" と同じ規則で、
+// 不正な UTF-8 バイトは1バイト1カラムになる(utf8.DecodeRune が RuneError, 1 を返すため)。
+// 空入力はカラム0個。
+//
+// この規則は Iterator / RegexpIterator / PreSplitIterator のすべてで一致していなければならない。
+// 一致していることは TestEmptySeparatorAgreement が見ている
 
 func removeEmpty(s [][]byte) [][]byte {
 	a := make([][]byte, 0, len(s))
@@ -117,54 +129,79 @@ func (i *Iterator) ElementAt(idx int) ([]byte, error) {
 
 // next は先頭から次の要素を取り出す
 func (i *Iterator) next() (item []byte, ok bool) {
-	s := i.remaining
+	for {
+		s := i.remaining
 
-	if len(s) == 0 {
-		return nil, false
+		if len(s) == 0 {
+			return nil, false
+		}
+
+		if i.sepLen == 0 {
+			// 区切りが空文字列のときは1ルーンを1カラムとして切り出す(bytes.Split と同じ規則)。
+			// 不正なUTF-8でも size >= 1 が返るので必ず前に進むし、長さ0のカラムもできない
+			_, size := utf8.DecodeRune(s)
+			a := s[:size]
+			i.remaining = s[size:]
+			i.front = append(i.front, a)
+			return a, true
+		}
+
+		m := bytes.Index(s, i.sep)
+		if m < 0 {
+			i.front = append(i.front, s)
+			i.remaining = nil
+			return s, true
+		}
+
+		a := s[:m]
+		i.remaining = s[m+i.sepLen:]
+
+		// sepLen >= 1 なので、読み飛ばすたびに remaining は必ず短くなる = 必ず終わる
+		if i.removeEmpty && len(a) == 0 {
+			continue
+		}
+
+		i.front = append(i.front, a)
+		return a, true
 	}
-
-	m := bytes.Index(s, i.sep)
-	if m < 0 {
-		i.front = append(i.front, s)
-		i.remaining = nil
-		return s, true
-	}
-
-	a := s[:m]
-	i.remaining = s[m+i.sepLen:]
-
-	if i.removeEmpty && len(a) == 0 {
-		return i.next()
-	}
-
-	i.front = append(i.front, a)
-	return a, true
 }
 
 // last は末尾から要素を取り出す
 func (i *Iterator) last() (item []byte, ok bool) {
-	s := i.remaining
+	for {
+		s := i.remaining
 
-	if len(s) == 0 {
-		return nil, false
+		if len(s) == 0 {
+			return nil, false
+		}
+
+		if i.sepLen == 0 {
+			// next() と同じくルーン単位。末尾から1ルーンぶん切り出す
+			_, size := utf8.DecodeLastRune(s)
+			a := s[len(s)-size:]
+			i.remaining = s[:len(s)-size]
+			i.back = append(i.back, a)
+			return a, true
+		}
+
+		m := bytes.LastIndex(s, i.sep)
+		if m < 0 {
+			i.back = append(i.back, s)
+			i.remaining = nil
+			return s, true
+		}
+
+		a := s[m+i.sepLen:]
+		i.remaining = s[:m]
+
+		// next() と同様、sepLen >= 1 なので必ず終わる
+		if i.removeEmpty && len(a) == 0 {
+			continue
+		}
+
+		i.back = append(i.back, a)
+		return a, true
 	}
-
-	m := bytes.LastIndex(s, i.sep)
-	if m < 0 {
-		i.back = append(i.back, s)
-		i.remaining = nil
-		return s, true
-	}
-
-	a := s[m+i.sepLen:]
-	i.remaining = s[:m]
-
-	if i.removeEmpty && len(a) == 0 {
-		return i.last()
-	}
-
-	i.back = append(i.back, a)
-	return a, true
 }
 
 func (i *Iterator) ToArray() [][]byte {
@@ -181,7 +218,9 @@ func (i *Iterator) ToArray() [][]byte {
 		copy(a, i.front)
 	}
 
-	// remaining を分割して追加
+	// remaining を分割して追加。
+	// sep が空のとき bytes.Split はルーン単位に展開するので、next()/last() と自動的に一致する
+	// (長さ0のカラムができないので removeEmpty も no-op になる)
 	if len(i.remaining) != 0 {
 		b := bytes.Split(i.remaining, i.sep)
 		if i.removeEmpty {
@@ -269,10 +308,16 @@ func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 	// 残りの文字列をすべて分割して back に格納
 	if len(r.s) != 0 {
 		res := make([][]byte, 0, 16)
-		for m := r.sep.FindIndex(r.s); m != nil; m = r.sep.FindIndex(r.s) {
-			a := r.s[:m[0]]
-			r.s = r.s[m[1]:]
+		for {
+			beg, end, found := nextSepMatch(r.sep, r.s)
+			if !found {
+				break
+			}
 
+			a := r.s[:beg]
+			r.s = r.s[end:]
+
+			// beg == 0 のときは end > 0 なので、どちらにせよ r.s は必ず短くなる = 必ず終わる
 			if r.removeEmpty && len(a) == 0 {
 				continue
 			}
@@ -307,31 +352,64 @@ func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 	return nil, errors.New(IndexOutOfRange)
 }
 
+// nextSepMatch は b の中の最初の「区切り」を [beg,end) で返す。
+// 幅0のマッチはルーン境界を表すものとして扱い、空のカラムを作らないように、
+// 先頭での幅0マッチだけ1ルーンぶん読み飛ばしてから探し直す。
+// これは splitByRegexp(= regexp.Regexp.Split) が
+//   - 先頭の幅0マッチを捨てる(match[1] != 0 のチェック)
+//   - 直前のマッチに接する幅0マッチを FindAll が返さない
+//
+// のと同じ規則を、逐次分割のために書き直したもの。
+// ok のとき beg > 0 || end > 0 が必ず成り立つので、呼び出し側は必ず前に進める
+func nextSepMatch(reg *regexp.Regexp, b []byte) (beg, end int, ok bool) {
+	m := reg.FindIndex(b)
+	if m == nil {
+		return 0, 0, false
+	}
+	if m[0] != 0 || m[1] != 0 {
+		return m[0], m[1], true
+	}
+
+	// 先頭で幅0のマッチ。カラムにせず1ルーンぶん進めてから探し直す
+	_, size := utf8.DecodeRune(b)
+	if size == 0 { // b が空
+		return 0, 0, false
+	}
+	m = reg.FindIndex(b[size:])
+	if m == nil {
+		return 0, 0, false
+	}
+	return size + m[0], size + m[1], true
+}
+
 // next は先頭から次の要素を取り出す
 func (r *RegexpIterator) next() (item []byte, ok bool) {
-	s := r.s
+	for {
+		s := r.s
 
-	if len(s) == 0 {
-		return nil, false
+		if len(s) == 0 {
+			return nil, false
+		}
+
+		beg, end, found := nextSepMatch(r.sep, s)
+		if !found {
+			r.front = append(r.front, s)
+			r.s = nil
+			return s, true
+		}
+
+		a := s[:beg]
+		r.s = s[end:]
+
+		// len(a) == 0 は beg == 0、つまり end > 0 なので、読み飛ばしても必ず前に進む
+		if r.removeEmpty && len(a) == 0 {
+			continue
+		}
+
+		r.front = append(r.front, a)
+
+		return a, true
 	}
-
-	m := r.sep.FindIndex(s)
-	if m == nil {
-		r.front = append(r.front, s)
-		r.s = nil
-		return s, true
-	}
-
-	a := s[:m[0]]
-	r.s = s[m[1]:]
-
-	if r.removeEmpty && len(a) == 0 {
-		return r.next()
-	}
-
-	r.front = append(r.front, a)
-
-	return a, true
 }
 
 func (r *RegexpIterator) ToArray() [][]byte {

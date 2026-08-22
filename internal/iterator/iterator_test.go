@@ -111,6 +111,18 @@ func TestIterator_ElementAt(t *testing.T) {
 		{name: "remove-empty(index out of range)", wantErr: true, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: 5}},
 		{name: "remove-empty negative", wantErr: false, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: -3}, want: "b"},
 		{name: "remove-empty negative(index out of range)", wantErr: true, fields: fields{front: []string{"a"}, remaining: "b    c d", sep: " ", sepLen: 1, removeEmpty: true}, args: args{idx: -5}},
+		// 空の区切りは1ルーン1カラム
+		{name: "empty-sep 1", fields: fields{remaining: "abc"}, args: args{idx: 1}, want: "a"},
+		{name: "empty-sep 3", fields: fields{remaining: "abc"}, args: args{idx: 3}, want: "c"},
+		{name: "empty-sep 4(index out of range)", wantErr: true, fields: fields{remaining: "abc"}, args: args{idx: 4}},
+		{name: "empty-sep -1", fields: fields{remaining: "abc"}, args: args{idx: -1}, want: "c"},
+		{name: "empty-sep -3", fields: fields{remaining: "abc"}, args: args{idx: -3}, want: "a"},
+		{name: "empty-sep -4(index out of range)", wantErr: true, fields: fields{remaining: "abc"}, args: args{idx: -4}},
+		{name: "empty-sep multibyte 2", fields: fields{remaining: "あいう"}, args: args{idx: 2}, want: "い"},
+		{name: "empty-sep multibyte -1", fields: fields{remaining: "あいう"}, args: args{idx: -1}, want: "う"},
+		// 空カラムができないので remove-empty があっても無限再帰しない
+		{name: "empty-sep remove-empty 1", fields: fields{remaining: "abc", removeEmpty: true}, args: args{idx: 1}, want: "a"},
+		{name: "empty-sep remove-empty -1", fields: fields{remaining: "abc", removeEmpty: true}, args: args{idx: -1}, want: "c"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,6 +164,14 @@ func TestIterator_next(t *testing.T) {
 		{name: "first element", wantItem: "abc", wantOk: true, fields: fields{front: []string{}, remaining: "abc def", sep: " ", sepLen: 1, removeEmpty: false}},
 		{name: "second element", wantItem: "def", wantOk: true, fields: fields{front: []string{"abc"}, remaining: "def", sep: " ", sepLen: 1, removeEmpty: false}},
 		{name: "no more elements", wantItem: "", wantOk: false, fields: fields{front: []string{"abc", "def"}, remaining: "", sep: " ", sepLen: 1, removeEmpty: false}},
+		// 空の区切りは1ルーンずつ返す
+		{name: "empty-sep first rune", wantItem: "a", wantOk: true, fields: fields{remaining: "abc"}},
+		// remove-empty つきでも無限再帰しない(クラッシュの再現)
+		{name: "empty-sep first rune(remove-empty)", wantItem: "a", wantOk: true, fields: fields{remaining: "abc", removeEmpty: true}},
+		{name: "empty-sep multibyte", wantItem: "あ", wantOk: true, fields: fields{remaining: "あいう"}},
+		{name: "empty-sep invalid utf8 head", wantItem: "a", wantOk: true, fields: fields{remaining: "a\xffb"}},
+		{name: "empty-sep invalid utf8 byte", wantItem: "\xff", wantOk: true, fields: fields{remaining: "\xffb"}},
+		{name: "empty-sep no more elements", wantItem: "", wantOk: false, fields: fields{remaining: ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -192,6 +212,12 @@ func TestIterator_last(t *testing.T) {
 		{name: "last element", wantItem: "def", wantOk: true, fields: fields{back: []string{}, remaining: "abc def", sep: " ", sepLen: 1, removeEmpty: false}},
 		{name: "second to last", wantItem: "abc", wantOk: true, fields: fields{back: []string{"def"}, remaining: "abc", sep: " ", sepLen: 1, removeEmpty: false}},
 		{name: "no more elements", wantItem: "", wantOk: false, fields: fields{back: []string{"def", "abc"}, remaining: "", sep: " ", sepLen: 1, removeEmpty: false}},
+		// 空の区切りは末尾から1ルーンずつ返す
+		{name: "empty-sep last rune", wantItem: "c", wantOk: true, fields: fields{remaining: "abc"}},
+		{name: "empty-sep last rune(remove-empty)", wantItem: "c", wantOk: true, fields: fields{remaining: "abc", removeEmpty: true}},
+		{name: "empty-sep multibyte", wantItem: "う", wantOk: true, fields: fields{remaining: "あいう"}},
+		{name: "empty-sep invalid utf8 tail", wantItem: "\xff", wantOk: true, fields: fields{remaining: "a\xff"}},
+		{name: "empty-sep no more elements", wantItem: "", wantOk: false, fields: fields{remaining: ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -230,6 +256,10 @@ func TestIterator_ToArray(t *testing.T) {
 	}{
 		{name: "front + remaining + back", fields: fields{front: []string{"a", "b"}, back: []string{"g"}, remaining: "c d e f", sep: " ", sepLen: 1}, want: []string{"a", "b", "c", "d", "e", "f", "g"}},
 		{name: "front + back only", fields: fields{front: []string{"a", "b"}, back: []string{"g"}, remaining: "", sep: " ", sepLen: 1}, want: []string{"a", "b", "g"}},
+		// 空の区切りでは bytes.Split がルーン単位に展開するので next()/last() と一致する
+		{name: "empty-sep", fields: fields{remaining: "abc"}, want: []string{"a", "b", "c"}},
+		{name: "empty-sep front + remaining + back", fields: fields{front: []string{"x"}, back: []string{"z"}, remaining: "ab"}, want: []string{"x", "a", "b", "z"}},
+		{name: "empty-sep multibyte", fields: fields{remaining: "あい"}, want: []string{"あ", "い"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -345,6 +375,33 @@ func TestRegexpIterator_ToArray(t *testing.T) {
 			fields: fields{r: strings.NewReader("a11b22c33d44e"), sep: regexp.MustCompile(`\d`), s: "a11b22c33d44e", front: []string{}, back: []string{}, removeEmpty: true, a: nil},
 			want:   []string{"a", "b", "c", "d", "e"},
 		},
+		// 幅0のマッチはルーン境界。以前はここで無限ループしていた
+		{
+			name:   "空パターンはルーン単位に分割する",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			want:   []string{"a", "b", "c"},
+		},
+		{
+			name:   "空パターン(remove-empty)",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}, removeEmpty: true},
+			want:   []string{"a", "b", "c"},
+		},
+		{
+			name:   "空パターン(マルチバイト)",
+			fields: fields{sep: regexp.MustCompile(``), s: "あい", front: []string{}, back: []string{}},
+			want:   []string{"あ", "い"},
+		},
+		{
+			// splitByRegexp(= regexp.Regexp.Split) と同じ結果になるべき
+			name:   `幅0にマッチしうる x* でも -S と一致する`,
+			fields: fields{sep: regexp.MustCompile(`x*`), s: "abxxcd", front: []string{}, back: []string{}},
+			want:   []string{"a", "b", "c", "d"},
+		},
+		{
+			name:   `幅0にマッチしうる \s* でも -S と一致する`,
+			fields: fields{sep: regexp.MustCompile(`\s*`), s: "a b", front: []string{}, back: []string{}},
+			want:   []string{"a", "b"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -418,6 +475,31 @@ func TestRegexpIterator_next(t *testing.T) {
 				removeEmpty: false,
 				a:           nil,
 			},
+			wantItem: "",
+			wantOk:   false,
+		},
+		// 幅0のマッチはルーン境界として扱い、空カラムを作らずに必ず前へ進む
+		{
+			name:     "空パターンなら1ルーンめ(a)が取り出せるべき",
+			fields:   fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			wantItem: "a",
+			wantOk:   true,
+		},
+		{
+			name:     "空パターン+remove-empty でも無限再帰しないべき",
+			fields:   fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}, removeEmpty: true},
+			wantItem: "a",
+			wantOk:   true,
+		},
+		{
+			name:     `x* でも1番目(a)が取り出せるべき`,
+			fields:   fields{sep: regexp.MustCompile(`x*`), s: "abxxcd", front: []string{}, back: []string{}},
+			wantItem: "a",
+			wantOk:   true,
+		},
+		{
+			name:     "空パターンで空文字列なら取り出せないべき",
+			fields:   fields{sep: regexp.MustCompile(``), s: "", front: []string{}, back: []string{}},
 			wantItem: "",
 			wantOk:   false,
 		},
@@ -567,6 +649,42 @@ func TestRegexpIterator_ElementAt(t *testing.T) {
 			args:    args{idx: -100},
 			want:    "",
 			wantErr: true,
+		},
+		// 幅0のマッチはルーン境界。負のインデックスは以前ここで無限ループしていた
+		{
+			name:   "空パターンの1番目",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			args:   args{idx: 1}, want: "a",
+		},
+		{
+			name:   "空パターンの3番目",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			args:   args{idx: 3}, want: "c",
+		},
+		{
+			name:   "空パターンの4番目は範囲外",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			args:   args{idx: 4}, want: "", wantErr: true,
+		},
+		{
+			name:   "空パターンの-1番目",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			args:   args{idx: -1}, want: "c",
+		},
+		{
+			name:   "空パターンの-3番目",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			args:   args{idx: -3}, want: "a",
+		},
+		{
+			name:   "空パターンの-4番目は範囲外",
+			fields: fields{sep: regexp.MustCompile(``), s: "abc", front: []string{}, back: []string{}},
+			args:   args{idx: -4}, want: "", wantErr: true,
+		},
+		{
+			name:   `x* の-1番目`,
+			fields: fields{sep: regexp.MustCompile(`x*`), s: "abxxcd", front: []string{}, back: []string{}},
+			args:   args{idx: -1}, want: "d",
 		},
 	}
 	for _, tt := range tests {
