@@ -58,6 +58,12 @@ func (p *PreSplitIterator) resetFromArray(a [][]byte) {
 // regexp には []byte を分割するメソッドがないので、Split と同じ規則で実装している
 func splitByRegexp(reg *regexp.Regexp, b []byte) [][]byte {
 	if len(b) == 0 {
+		// regexp.Regexp.Split と同じで、空文字列にマッチしうるパターン(= 空パターン)のときは
+		// カラム0個、そうでなければ空の行全体を1カラムとして返す。
+		// stdlib の `len(re.expr) > 0 && len(s) == 0` に対応する
+		if reg.String() == "" {
+			return nil
+		}
 		return [][]byte{b}
 	}
 
