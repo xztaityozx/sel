@@ -5,19 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+
+	"github.com/xztaityozx/sel/internal/sliceutil"
 )
-
-// resetByteSlices はスライスを長さ0にリセットする。
-// 容量が shrinkThreshold を超えている場合は nil を返し、backing array を GC 可能にする。
-// それ以外の場合は [:0] で容量を維持して再利用する。
-const shrinkThreshold = 64
-
-func resetByteSlices(s [][]byte) [][]byte {
-	if cap(s) > shrinkThreshold {
-		return nil
-	}
-	return s[:0]
-}
 
 func removeEmpty(s [][]byte) [][]byte {
 	a := make([][]byte, 0, len(s))
@@ -56,8 +46,8 @@ func (i *Iterator) String() string {
 // Reset はこのイテレーターをリセットする
 func (i *Iterator) Reset(b []byte) {
 	i.remaining = b
-	i.front = resetByteSlices(i.front)
-	i.back = resetByteSlices(i.back)
+	i.front = sliceutil.Reset(i.front)
+	i.back = sliceutil.Reset(i.back)
 	i.a = nil
 }
 
@@ -367,8 +357,8 @@ func (r *RegexpIterator) ToArray() [][]byte {
 
 func (r *RegexpIterator) Reset(b []byte) {
 	r.s = b
-	r.front = resetByteSlices(r.front)
-	r.back = resetByteSlices(r.back)
+	r.front = sliceutil.Reset(r.front)
+	r.back = sliceutil.Reset(r.back)
 	r.a = nil
 }
 
