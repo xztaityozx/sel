@@ -625,6 +625,204 @@ func Test_E2E(t *testing.T) {
 			expectedStderr: []string{""},
 			expectedError:  nil,
 		},
+
+		// 空の区切りは行をルーン単位に分割する。
+		// 以前は -r でスタックオーバーフロー、-g でハングしていた
+		{
+			name: "sel -r -d '' 1 does not crash and prints a",
+			input: input{
+				args:  []string{"-r", "-d", "", "1"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d '' 1 2 3 splits into runes",
+			input: input{
+				args:  []string{"-d", "", "1", "2", "3"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d '' 0 prints all runes",
+			input: input{
+				args:  []string{"-d", "", "0"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d '' -1 prints the last rune",
+			input: input{
+				args:  []string{"-d", "", "--", "-1"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -S -d '' 1 2 3 agrees with the lazy path",
+			input: input{
+				args:  []string{"-S", "-d", "", "1", "2", "3"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -d '' 1 2 3 splits into runes",
+			input: input{
+				args:  []string{"-g", "-d", "", "1", "2", "3"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -d '' 0 does not hang",
+			input: input{
+				args:  []string{"-g", "-d", "", "0"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -d '' -1 does not hang",
+			input: input{
+				args:  []string{"-g", "-d", "", "--", "-1"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -r -d '' 0 does not hang",
+			input: input{
+				args:  []string{"-g", "-r", "-d", "", "0"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -S -d '' 0 agrees with the lazy path",
+			input: input{
+				args:  []string{"-g", "-S", "-d", "", "0"},
+				stdin: []string{"abc"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d '' 1 2 3 handles multibyte runes",
+			input: input{
+				args:  []string{"-d", "", "1", "2", "3"},
+				stdin: []string{"あいう"},
+			},
+			expectedStdout: []string{"あ い う"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -d '' 1 2 3 handles multibyte runes",
+			input: input{
+				args:  []string{"-g", "-d", "", "1", "2", "3"},
+				stdin: []string{"あいう"},
+			},
+			expectedStdout: []string{"あ い う"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -S -d '' 1 2 3 handles multibyte runes",
+			input: input{
+				args:  []string{"-S", "-d", "", "1", "2", "3"},
+				stdin: []string{"あいう"},
+			},
+			expectedStdout: []string{"あ い う"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d '' 4 with 3 runes exits with error",
+			input: input{
+				args:  []string{"-d", "", "4"},
+				stdin: []string{"abc"},
+			},
+			expectExitError: true,
+		},
+		// 空行のときのカラム数が4実装で一致すること。
+		// 空の区切りでは空行は0カラムなので、どれも範囲外で終了するべき。
+		// -M を付けると「範囲外だから何も書かない」と「空カラムを書いた」が
+		// どちらも空行になって区別がつかないので、あえて -M なしで見ている
+		{
+			name: "sel -d '' 1 on an empty line exits with error",
+			input: input{
+				args:  []string{"-d", "", "1"},
+				stdin: []string{"", "a"},
+			},
+			expectExitError: true,
+		},
+		{
+			name: "sel -S -d '' 1 on an empty line exits with error",
+			input: input{
+				args:  []string{"-S", "-d", "", "1"},
+				stdin: []string{"", "a"},
+			},
+			expectExitError: true,
+		},
+		{
+			name: "sel -g -d '' 1 on an empty line exits with error",
+			input: input{
+				args:  []string{"-g", "-d", "", "1"},
+				stdin: []string{"", "a"},
+			},
+			expectExitError: true,
+		},
+		{
+			name: "sel -g -S -d '' 1 on an empty line exits with error",
+			input: input{
+				args:  []string{"-g", "-S", "-d", "", "1"},
+				stdin: []string{"", "a"},
+			},
+			expectExitError: true,
+		},
+		// 幅0にマッチしうるパターンでも -S あり/なしで一致すること
+		{
+			name: "sel -g -d 'x*' 0 agrees with the pre-split path",
+			input: input{
+				args:  []string{"-g", "-d", "x*", "0"},
+				stdin: []string{"abxxcd"},
+			},
+			expectedStdout: []string{"a b c d"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -g -S -d 'x*' 0 agrees with the lazy path",
+			input: input{
+				args:  []string{"-g", "-S", "-d", "x*", "0"},
+				stdin: []string{"abxxcd"},
+			},
+			expectedStdout: []string{"a b c d"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
 	}
 
 	for _, testcase := range testcases {

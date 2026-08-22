@@ -7,6 +7,38 @@ import (
 	"testing"
 )
 
+// TestSplitByRegexp は splitByRegexp を直接見る。
+// 幅0マッチの扱いについては、遅延分割する RegexpIterator がこれに合わせる参照実装になっている
+func TestSplitByRegexp(t *testing.T) {
+	tests := []struct {
+		name string
+		reg  *regexp.Regexp
+		b    string
+		want []string
+	}{
+		{name: `\d+`, reg: regexp.MustCompile(`\d+`), b: "a11b", want: []string{"a", "b"}},
+		{name: `\d`, reg: regexp.MustCompile(`\d`), b: "a11b", want: []string{"a", "", "b"}},
+		// 空パターンはルーン単位に分割する
+		{name: "空パターン", reg: regexp.MustCompile(``), b: "abc", want: []string{"a", "b", "c"}},
+		{name: "空パターン(マルチバイト)", reg: regexp.MustCompile(``), b: "あい", want: []string{"あ", "い"}},
+		// 空パターン + 空入力はカラム0個。空文字列にマッチしないパターンなら1カラム(stdlib と同じ)
+		{name: "空パターン+空入力", reg: regexp.MustCompile(``), b: "", want: nil},
+		{name: `\s+ +空入力`, reg: regexp.MustCompile(`\s+`), b: "", want: []string{""}},
+		// 幅0にマッチしうるパターンでも空カラムを作らない
+		{name: `x*`, reg: regexp.MustCompile(`x*`), b: "abxxcd", want: []string{"a", "b", "c", "d"}},
+		{name: `\s*`, reg: regexp.MustCompile(`\s*`), b: "a b", want: []string{"a", "b"}},
+		// 末尾の区切りは空カラムを残す(現状の挙動を固定する)
+		{name: "末尾の区切り", reg: regexp.MustCompile(`,`), b: "a,b,", want: []string{"a", "b", ""}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ss(splitByRegexp(tt.reg, []byte(tt.b))); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("splitByRegexp() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNewPreSplitByRegexpIterator(t *testing.T) {
 	type args struct {
 		s   string
