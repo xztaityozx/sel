@@ -29,6 +29,15 @@ func normalize(a []string) []string {
 
 // TestEmptySeparatorAgreement は「空の区切り = ルーン分割」が4実装すべてで一致することを見る。
 // 参照実装は bytes.Split(b, nil)
+//
+// カバレッジの既知のギャップ(#132): ここで見ているのは「空の区切り/幅0マッチ」のみで、
+// 「非空の区切り文字が行末/行頭とちょうど一致する」ケースは含まれていない。
+// 後者では Iterator/RegexpIterator の遅延分割(next/last/ElementAt)が
+// 「残り文字列が空 = もう要素はない」と誤判定し、境界の空カラムを取りこぼす。
+// PreSplitIterator/PreSplitByRegexpIterator(-S、splitByRegexp は regexp.Split 相当)は
+// 境界の空フィールドを正しく含めるため、-g 単体(非-S)だけ結果が食い違う。
+// 例: "a,b,c,d," を "," で分割すると bytes.Split 相当は5要素(末尾に空文字列)だが、
+// 遅延分割の ToArray/ElementAt は4要素しか返さない。詳細は #132 を参照。
 func TestEmptySeparatorAgreement(t *testing.T) {
 	inputs := []string{"", "a", "abc", "あいう", "a\xffb", "🍣x"}
 
