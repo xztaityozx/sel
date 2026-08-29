@@ -63,11 +63,33 @@ func TestWriter_Write(t *testing.T) {
 			if err := w.Write(tt.args.columns...); (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			_ = w.buf.Flush()
 
-			assert.Equal(t, "adbdc", buf.String())
+			// Write だけでは行が未完成なので、まだ buf には何も渡っていないはず
+			_ = w.buf.Flush()
+			assert.Equal(t, "", buf.String())
+
+			// WriteNewLine で行が完成して、はじめて buf に渡る
+			_ = w.WriteNewLine()
+			_ = w.buf.Flush()
+			assert.Equal(t, "adbdc\n", buf.String())
 		})
 	}
+}
+
+// TestWriter_Write_PartialLineNotFlushed は、行の途中で終わった(WriteNewLine を呼ばなかった)場合に
+// その断片が Flush で漏れないことを確認する。cmd.run() がエラー時に Flush する経路があるための保証
+func TestWriter_Write_PartialLineNotFlushed(t *testing.T) {
+	buf := &bytes.Buffer{}
+	w := NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, buf, false)
+
+	assert.NoError(t, w.Write([]byte("complete")))
+	assert.NoError(t, w.WriteNewLine())
+
+	// 2行目は WriteNewLine まで到達しない(選択が失敗した状況を模す)
+	assert.NoError(t, w.Write([]byte("partial")))
+
+	assert.NoError(t, w.Flush())
+	assert.Equal(t, "complete\n", buf.String())
 }
 
 func BenchmarkWriter_Write(b *testing.B) {

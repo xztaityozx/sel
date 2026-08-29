@@ -1,7 +1,6 @@
 package cmd
 
 import (
-  "log"
   "os"
 
   "github.com/spf13/cobra"
@@ -13,29 +12,19 @@ var completionCmd = &cobra.Command{
   DisableFlagsInUseLine: true,
   ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
   Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-  Run: func(cmd *cobra.Command, args []string) {
+  RunE: func(cmd *cobra.Command, args []string) error {
+    cmd.SilenceUsage = true
     switch args[0] {
     case "bash":
-      err := cmd.Root().GenBashCompletion(os.Stdout)
-      if err != nil {
-        log.Fatalln(err)
-      }
+      return cmd.Root().GenBashCompletion(os.Stdout)
     case "zsh":
-      err := cmd.Root().GenZshCompletion(os.Stdout)
-      if err != nil {
-        log.Fatalln(err)
-      }
+      return cmd.Root().GenZshCompletion(os.Stdout)
     case "fish":
-      err := cmd.Root().GenFishCompletion(os.Stdout, true)
-      if err != nil {
-        log.Fatalln(err)
-      }
+      return cmd.Root().GenFishCompletion(os.Stdout, true)
     case "powershell":
-      err := cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
-      if err != nil {
-        log.Fatalln(err)
-      }
+      return cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
     }
+    return nil
   },
 }
 

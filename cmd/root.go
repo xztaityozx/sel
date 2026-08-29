@@ -1,9 +1,10 @@
 package cmd
 
 import (
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -18,27 +19,34 @@ import (
 
 var Version string = "undefined"
 
+// stdinSourceName は標準入力から読んでいるときにエラーメッセージで使うソース名
+const stdinSourceName = "<stdin>"
+
 var rootCmd = &cobra.Command{
 	Use:   "sel [queries...]",
 	Short: "select column",
 	Long: `
-          _ 
+          _
  ___  ___| |
 / __|/ _ \ |
 \__ \  __/ |
 |___/\___|_|
 
 __sel__ect column`,
-	Args:    cobra.MinimumNArgs(1),
-	Version: Version,
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:          cobra.MinimumNArgs(1),
+	Version:       Version,
+	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// ここから先は実行時エラーなので、Usage は出さない（引数のパースエラーはこの手前で弾かれる）
+		cmd.SilenceUsage = true
+
 		opt, err := option.NewOption(viper.GetViper())
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 		selectors, err := parser.Parse(args)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		w := output.NewWriter(opt, os.Stdout, false)
@@ -46,29 +54,30 @@ __sel__ect column`,
 		if len(opt.Files) != 0 {
 			files, err := opt.Enumerate()
 			if err != nil {
-				log.Fatalln(err)
+				return err
 			}
 
 			for _, file := range files {
-				if fp, err := os.Open(file); err != nil {
-					log.Fatalln(err)
-				} else {
-					if err := run(fp, opt, w, selectors); err != nil {
-						log.Fatalln(err)
-					}
+				fp, err := os.Open(file)
+				if err != nil {
+					return err
+				}
+				if err := run(fp, file, opt, w, selectors, args); err != nil {
+					return err
 				}
 			}
-		} else {
-			if err := run(os.Stdin, opt, w, selectors); err != nil {
-				log.Fatalln(err)
-			}
+
+			return nil
 		}
+
+		return run(os.Stdin, stdinSourceName, opt, w, selectors, args)
 	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatalln(err)
+		fmt.Fprintln(os.Stderr, "sel:", err)
+		os.Exit(1)
 	}
 }
 
@@ -136,12 +145,41 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `)
 }
 
+// positionError はエラーに発生位置（入力元・行番号・クエリ）を付与する
+type positionError struct {
+	source string
+	line   int
+	query  string
+	err    error
+}
+
+func (e *positionError) Error() string {
+	if e.query != "" {
+		return fmt.Sprintf("%s:%d: query %q: %s", e.source, e.line, e.query, e.err)
+	}
+	return fmt.Sprintf("%s:%d: %s", e.source, e.line, e.err)
+}
+
+func (e *positionError) Unwrap() error { return e.err }
+
 // run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
-func run(input *os.File, opt option.Option, w *output.Writer, selectors []column.Selector) error {
+// source はエラーメッセージに出す入力元の名前（ファイルパスか stdinSourceName）
+// queries は selectors と同じ順番のクエリ文字列で、エラーの発生位置を表すのに使う
+func run(input *os.File, source string, opt option.Option, w *output.Writer, selectors []column.Selector, queries []string) (err error) {
+	var line int
+
+	// input のクローズ失敗は、他のエラーが既にあればそちらを優先して返す。
+	// ただしその場合でもクローズ失敗自体は握りつぶさず、警告として stderr に出す
 	defer func(input *os.File) {
-		if err := input.Close(); err != nil {
-			log.Fatalln(err)
+		cerr := input.Close()
+		if cerr == nil {
+			return
 		}
+		if err == nil {
+			err = &positionError{source: source, line: line, err: cerr}
+			return
+		}
+		fmt.Fprintf(os.Stderr, "sel: %s: warning: failed to close: %s\n", source, cerr)
 	}(input)
 
 	src, err := iterator.NewSource(opt, input)
@@ -154,22 +192,45 @@ func run(input *os.File, opt option.Option, w *output.Writer, selectors []column
 		filler = missingFiller{enabled: true, fill: []byte(opt.FillMissing)}
 	}
 
+	// 早期 return を含むどの経路でも、それまでに選択できた分をちゃんと書き出す
+	defer func() {
+		if ferr := w.Flush(); ferr != nil && err == nil {
+			err = &positionError{source: source, line: line, err: ferr}
+		}
+	}()
+
 	for {
-		columns, err := src.Next()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+		columns, nerr := src.Next()
+		if nerr != nil {
+			if errors.Is(nerr, io.EOF) {
 				break
 			}
-			return err
+			// CSV/TSVモードでは encoding/csv 自身が物理行番号を持っているので、
+			// 自前のレコードカウンタと矛盾しないようそちらを使う
+			var perr *csv.ParseError
+			if errors.As(nerr, &perr) {
+				return &positionError{source: source, line: perr.Line, err: nerr}
+			}
+			return &positionError{source: source, line: line + 1, err: nerr}
 		}
+		line++
 
-		if err := selectAll(columns, w, selectors, filler); err != nil {
-			return err
+		if serr := selectAll(columns, w, selectors, queries, filler); serr != nil {
+			return &positionError{source: source, line: line, query: serr.query, err: serr.err}
 		}
 	}
 
-	return w.Flush()
+	return nil
 }
+
+// selectError は selectAll 内でどのクエリが失敗したかを保持する
+type selectError struct {
+	query string
+	err   error
+}
+
+func (e *selectError) Error() string { return e.err.Error() }
+func (e *selectError) Unwrap() error { return e.err }
 
 // missingFiller は範囲外のカラムをどう埋めるかを表す。
 // enabled が false のときは範囲外をエラーにする(-M も -E も指定されていない)
@@ -180,20 +241,33 @@ type missingFiller struct {
 	fill []byte
 }
 
-func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, filler missingFiller) error {
-	for _, selector := range selectors {
+func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, queries []string, filler missingFiller) *selectError {
+	for i, selector := range selectors {
+		// selectors と queries は parser.Parse(args) / args という別々の経路で run() に渡ってくるので、
+		// 対応関係が崩れても panic せずにクエリ文字列なしのエラーにする
+		query := ""
+		if i < len(queries) {
+			query = queries[i]
+		}
+
 		err := selector.Select(w, columns)
 		if err != nil {
-			if filler.enabled && err.Error() == iterator.IndexOutOfRange {
+			if filler.enabled && iterator.IsIndexOutOfRange(err) {
 				if len(filler.fill) != 0 {
 					if werr := w.Write(filler.fill); werr != nil {
-						return werr
+						return &selectError{query: query, err: werr}
 					}
 				}
 				continue
 			}
-			return err
+			if iterator.IsIndexOutOfRange(err) {
+				err = fmt.Errorf("line has only %d columns", len(columns.ToArray()))
+			}
+			return &selectError{query: query, err: err}
 		}
 	}
-	return w.WriteNewLine()
+	if err := w.WriteNewLine(); err != nil {
+		return &selectError{err: err}
+	}
+	return nil
 }

@@ -51,6 +51,11 @@ type Iterator struct {
 
 var IndexOutOfRange = "index out of range"
 
+// IsIndexOutOfRange は err が範囲外アクセスによるものかどうかを判定する
+func IsIndexOutOfRange(err error) bool {
+	return err != nil && err.Error() == IndexOutOfRange
+}
+
 func (i *Iterator) String() string {
 	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\tfront: %s,\n\tback: %s\n\tremaining: '%s'\n}", i.sep, i.sepLen, i.front, i.back, i.remaining)
 }

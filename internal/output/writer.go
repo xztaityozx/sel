@@ -16,6 +16,11 @@ type Writer struct {
 	writtenColumns int
 	outputTemplate *template.Template
 	column         []string
+	// pending は組み立て中の1行分のバイト列。行が完成する(WriteNewLine が呼ばれる)まで
+	// buf には書き込まない。こうしておくと、行の途中でエラーが起きて WriteNewLine まで
+	// 辿り着けなかったときに、その未完成の断片が buf に混ざらず、buf は常に完成した行だけを
+	// 保持する状態になる。呼び出し側はどのタイミングで Flush しても不完全な行が漏れない
+	pending []byte
 }
 
 var newLine = []byte("\n")
@@ -46,27 +51,21 @@ func (w *Writer) Write(columns ...[]byte) error {
 	}
 
 	if w.writtenColumns != 0 {
-		if _, err := w.buf.Write(w.delimiter); err != nil {
-			return err
-		}
+		w.pending = append(w.pending, w.delimiter...)
 	}
-
-	if _, err := w.buf.Write(columns[0]); err != nil {
-		return err
-	}
-
+	w.pending = append(w.pending, columns[0]...)
 	for _, v := range columns[1:] {
-		if _, err := w.buf.Write(w.delimiter); err != nil {
-			return err
-		}
-		if _, err := w.buf.Write(v); err != nil {
-			return err
-		}
+		w.pending = append(w.pending, w.delimiter...)
+		w.pending = append(w.pending, v...)
 	}
 
 	w.writtenColumns += len(columns)
 
 	if w.autoFlush {
+		if _, err := w.buf.Write(w.pending); err != nil {
+			return err
+		}
+		w.pending = w.pending[:0]
 		return w.buf.Flush()
 	}
 
@@ -82,10 +81,15 @@ func (w *Writer) WriteNewLine() error {
 			return err
 		}
 		w.column = sliceutil.Reset(w.column)
+		w.writtenColumns = 0
+		_, err = w.buf.Write(newLine)
+		return err
 	}
 
 	w.writtenColumns = 0
-	_, err := w.buf.Write(newLine)
+	w.pending = append(w.pending, newLine...)
+	_, err := w.buf.Write(w.pending)
+	w.pending = w.pending[:0]
 	return err
 }
 
