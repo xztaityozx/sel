@@ -68,13 +68,14 @@ func TestIndexSelector_Select(t *testing.T) {
 		writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, false)
 
 		err := is.Select(writer, iterator.NewIterator(strings.Join(cols, " "), " ", false))
+		assert.Nil(t, writer.WriteNewLine())
 
 		assert.Nil(t, writer.Flush())
 		assert.Nil(t, err)
 		if is.index == 0 {
-			assert.Equal(t, strings.Join(cols, " "), w.String())
+			assert.Equal(t, strings.Join(cols, " ")+"\n", w.String())
 		} else {
-			assert.Equal(t, cols[is.index-1], w.String())
+			assert.Equal(t, cols[is.index-1]+"\n", w.String())
 		}
 	}
 }

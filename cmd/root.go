@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
@@ -164,9 +165,21 @@ func (e *positionError) Unwrap() error { return e.err }
 // run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
 // source はエラーメッセージに出す入力元の名前（ファイルパスか stdinSourceName）
 // queries は selectors と同じ順番のクエリ文字列で、エラーの発生位置を表すのに使う
-func run(input *os.File, source string, opt option.Option, w *output.Writer, selectors []column.Selector, queries []string) error {
+func run(input *os.File, source string, opt option.Option, w *output.Writer, selectors []column.Selector, queries []string) (err error) {
+	var line int
+
+	// input のクローズ失敗は、他のエラーが既にあればそちらを優先して返す。
+	// ただしその場合でもクローズ失敗自体は握りつぶさず、警告として stderr に出す
 	defer func(input *os.File) {
-		_ = input.Close()
+		cerr := input.Close()
+		if cerr == nil {
+			return
+		}
+		if err == nil {
+			err = &positionError{source: source, line: line, err: cerr}
+			return
+		}
+		fmt.Fprintf(os.Stderr, "sel: %s: warning: failed to close: %s\n", source, cerr)
 	}(input)
 
 	src, err := iterator.NewSource(opt, input)
@@ -179,24 +192,32 @@ func run(input *os.File, source string, opt option.Option, w *output.Writer, sel
 		filler = missingFiller{enabled: true, fill: []byte(opt.FillMissing)}
 	}
 
-	line := 0
+	// 早期 return を含むどの経路でも、それまでに選択できた分をちゃんと書き出す
+	defer func() {
+		if ferr := w.Flush(); ferr != nil && err == nil {
+			err = &positionError{source: source, line: line, err: ferr}
+		}
+	}()
+
 	for {
-		columns, err := src.Next()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+		columns, nerr := src.Next()
+		if nerr != nil {
+			if errors.Is(nerr, io.EOF) {
 				break
 			}
-			return &positionError{source: source, line: line + 1, err: err}
+			// CSV/TSVモードでは encoding/csv 自身が物理行番号を持っているので、
+			// 自前のレコードカウンタと矛盾しないようそちらを使う
+			var perr *csv.ParseError
+			if errors.As(nerr, &perr) {
+				return &positionError{source: source, line: perr.Line, err: nerr}
+			}
+			return &positionError{source: source, line: line + 1, err: nerr}
 		}
 		line++
 
-		if err := selectAll(columns, w, selectors, queries, filler); err != nil {
-			return &positionError{source: source, line: line, query: err.query, err: err.err}
+		if serr := selectAll(columns, w, selectors, queries, filler); serr != nil {
+			return &positionError{source: source, line: line, query: serr.query, err: serr.err}
 		}
-	}
-
-	if err := w.Flush(); err != nil {
-		return &positionError{source: source, line: line, err: err}
 	}
 
 	return nil
@@ -222,12 +243,19 @@ type missingFiller struct {
 
 func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, queries []string, filler missingFiller) *selectError {
 	for i, selector := range selectors {
+		// selectors と queries は parser.Parse(args) / args という別々の経路で run() に渡ってくるので、
+		// 対応関係が崩れても panic せずにクエリ文字列なしのエラーにする
+		query := ""
+		if i < len(queries) {
+			query = queries[i]
+		}
+
 		err := selector.Select(w, columns)
 		if err != nil {
 			if filler.enabled && iterator.IsIndexOutOfRange(err) {
 				if len(filler.fill) != 0 {
 					if werr := w.Write(filler.fill); werr != nil {
-						return &selectError{query: queries[i], err: werr}
+						return &selectError{query: query, err: werr}
 					}
 				}
 				continue
@@ -235,7 +263,7 @@ func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Se
 			if iterator.IsIndexOutOfRange(err) {
 				err = fmt.Errorf("line has only %d columns", len(columns.ToArray()))
 			}
-			return &selectError{query: queries[i], err: err}
+			return &selectError{query: query, err: err}
 		}
 	}
 	if err := w.WriteNewLine(); err != nil {
