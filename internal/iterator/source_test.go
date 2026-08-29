@@ -95,11 +95,16 @@ func readAll(t *testing.T, src Source) [][]string {
 			t.Fatalf("Next() unexpected error = %v", err)
 		}
 
-		rt = append(rt, append([]string(nil), columns.ToArray()...))
+		// Columns が返す []byte は次の Next() までしか有効でないので、文字列に写しておく
+		rt = append(rt, ss(columns.ToArray()))
 	}
 }
 
 func TestLineSource_Next(t *testing.T) {
+	// bufio のバッファ(既定4096バイト)に収まらない行。何度かに分けて読むことになる
+	long := strings.Repeat("x", 10000)
+	longer := strings.Repeat("y", 30000)
+
 	tests := []struct {
 		name  string
 		input string
@@ -110,6 +115,17 @@ func TestLineSource_Next(t *testing.T) {
 		{name: "no trailing newline", input: "a b\nc d", want: [][]string{{"a", "b"}, {"c", "d"}}},
 		// 空行も1行として供給される。カラムは0個になる
 		{name: "empty line", input: "a b\n\nc d\n", want: [][]string{{"a", "b"}, nil, {"c", "d"}}},
+		// バッファに収まらない長い行。前後の行が壊れないことも見る
+		{
+			name:  "line longer than buffer",
+			input: "a b\n" + long + " tail\n" + longer + " " + long + "\nc d\n",
+			want:  [][]string{{"a", "b"}, {long, "tail"}, {longer, long}, {"c", "d"}},
+		},
+		{
+			name:  "line longer than buffer without trailing newline",
+			input: "a b\n" + long + " tail",
+			want:  [][]string{{"a", "b"}, {long, "tail"}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -130,7 +146,7 @@ func TestLineSource_Next_ReturnsReadError(t *testing.T) {
 
 	columns, err := src.Next()
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"a", "b"}, columns.ToArray())
+	assert.Equal(t, []string{"a", "b"}, ss(columns.ToArray()))
 
 	// 行を返しきったあとにエラーが返り、それ以降は何度呼んでも同じエラーになる
 	_, err = src.Next()

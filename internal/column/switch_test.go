@@ -48,12 +48,21 @@ type testColumns struct {
 
 var _ iterator.Columns = (*testColumns)(nil)
 
-func (t *testColumns) ElementAt(_ int) (string, error) {
+func (t *testColumns) ElementAt(_ int) ([]byte, error) {
 	panic("implement me")
 }
 
-func (t *testColumns) ToArray() []string {
-	return t.a
+func (t *testColumns) ToArray() [][]byte {
+	return toByteSlices(t.a)
+}
+
+// toByteSlices は文字列の配列を [][]byte にする
+func toByteSlices(a []string) [][]byte {
+	rt := make([][]byte, len(a))
+	for i, v := range a {
+		rt[i] = []byte(v)
+	}
+	return rt
 }
 
 func TestSwitchSelector_Select(t *testing.T) {

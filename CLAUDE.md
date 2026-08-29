@@ -46,8 +46,8 @@ golangci-lint run
    - `Source` - Supplies one `Columns` per line/record, `io.EOF` at the end. `cmd/root.go` drives this loop
      - `lineSource` - Reads lines with `bufio` and hands them to a splitting `Columns`
      - `csvSource` - Reads records with `encoding/csv` (already split)
-   - `Columns` - Per-line column view (`ElementAt` / `ToArray`). The only thing `Selector` sees
-     - `Iterator` - On-demand string splitting
+   - `Columns` - Per-line column view (`ElementAt` / `ToArray`, both `[]byte`). The only thing `Selector` sees
+     - `Iterator` - On-demand splitting
      - `RegexpIterator` - Regex-based splitting
      - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
 
@@ -56,6 +56,8 @@ golangci-lint run
 ### Key Design Decisions
 - **1-indexed columns**: Index `0` returns the entire line (like awk's `$0`)
 - **Negative indices**: `-1` is last column, `-2` is second-to-last
+- **Zero-copy line reading**: columns are `[]byte` all the way from `bufio`'s read buffer to `output.Writer`, so there is no per-line allocation and no `unsafe`. Everything a `Columns` returns points into that buffer and is only valid until the next `Source.Next()` — copy with `bytes.Clone` to keep it longer
+- **Zero-width separator matches are rune boundaries**: they split but never produce an empty column, so an empty separator (literal or regexp) explodes a line into runes (`bytes.Split(b, nil)` / gawk's `FS=""`); invalid UTF-8 bytes become one column each. All four `Columns` implementations must agree here — `TestEmptySeparatorAgreement` pins it
 - **Lazy vs eager splitting**: Default is lazy (efficient for early columns), `-S` flag pre-splits (efficient for later columns)
 - **CSV/TSV mode**: Uses `encoding/csv` for proper quote handling
 

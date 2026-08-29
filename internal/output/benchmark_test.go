@@ -2,7 +2,6 @@ package output
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/xztaityozx/sel/internal/option"
@@ -19,7 +18,7 @@ func BenchmarkWriter_Write_Single(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Write("column")
+		_ = w.Write([]byte("column"))
 		_ = w.WriteNewLine()
 	}
 }
@@ -32,7 +31,7 @@ func BenchmarkWriter_Write_Multiple(b *testing.B) {
 	}
 	buf := &bytes.Buffer{}
 	w := NewWriter(opt, buf, false)
-	columns := strings.Split(strings.Repeat("column ", 100), " ")
+	columns := bytes.Split(bytes.Repeat([]byte("column "), 100), []byte(" "))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
@@ -52,7 +51,7 @@ func BenchmarkWriter_Write_WithFlush(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Write("column")
+		_ = w.Write([]byte("column"))
 		_ = w.WriteNewLine()
 	}
 }

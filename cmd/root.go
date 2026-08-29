@@ -174,9 +174,9 @@ func run(input *os.File, source string, opt option.Option, w *output.Writer, sel
 		return err
 	}
 
-	var fillMissing *string
+	var filler missingFiller
 	if opt.IgnoreMissing {
-		fillMissing = &opt.FillMissing
+		filler = missingFiller{enabled: true, fill: []byte(opt.FillMissing)}
 	}
 
 	line := 0
@@ -190,7 +190,7 @@ func run(input *os.File, source string, opt option.Option, w *output.Writer, sel
 		}
 		line++
 
-		if err := selectAll(columns, w, selectors, queries, fillMissing); err != nil {
+		if err := selectAll(columns, w, selectors, queries, filler); err != nil {
 			return &positionError{source: source, line: line, query: err.query, err: err.err}
 		}
 	}
@@ -211,13 +211,22 @@ type selectError struct {
 func (e *selectError) Error() string { return e.err.Error() }
 func (e *selectError) Unwrap() error { return e.err }
 
-func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, queries []string, fillMissing *string) *selectError {
+// missingFiller は範囲外のカラムをどう埋めるかを表す。
+// enabled が false のときは範囲外をエラーにする(-M も -E も指定されていない)
+type missingFiller struct {
+	enabled bool
+	// 埋める値。長さ0のときは何も書き出さない。
+	// 行ごとに []byte へ変換しなおさなくていいように、run() で一度だけ作る
+	fill []byte
+}
+
+func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Selector, queries []string, filler missingFiller) *selectError {
 	for i, selector := range selectors {
 		err := selector.Select(w, columns)
 		if err != nil {
-			if fillMissing != nil && iterator.IsIndexOutOfRange(err) {
-				if *fillMissing != "" {
-					if werr := w.Write(*fillMissing); werr != nil {
+			if filler.enabled && iterator.IsIndexOutOfRange(err) {
+				if len(filler.fill) != 0 {
+					if werr := w.Write(filler.fill); werr != nil {
 						return &selectError{query: queries[i], err: werr}
 					}
 				}

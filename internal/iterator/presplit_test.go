@@ -7,6 +7,38 @@ import (
 	"testing"
 )
 
+// TestSplitByRegexp は splitByRegexp を直接見る。
+// 幅0マッチの扱いについては、遅延分割する RegexpIterator がこれに合わせる参照実装になっている
+func TestSplitByRegexp(t *testing.T) {
+	tests := []struct {
+		name string
+		reg  *regexp.Regexp
+		b    string
+		want []string
+	}{
+		{name: `\d+`, reg: regexp.MustCompile(`\d+`), b: "a11b", want: []string{"a", "b"}},
+		{name: `\d`, reg: regexp.MustCompile(`\d`), b: "a11b", want: []string{"a", "", "b"}},
+		// 空パターンはルーン単位に分割する
+		{name: "空パターン", reg: regexp.MustCompile(``), b: "abc", want: []string{"a", "b", "c"}},
+		{name: "空パターン(マルチバイト)", reg: regexp.MustCompile(``), b: "あい", want: []string{"あ", "い"}},
+		// 空パターン + 空入力はカラム0個。空文字列にマッチしないパターンなら1カラム(stdlib と同じ)
+		{name: "空パターン+空入力", reg: regexp.MustCompile(``), b: "", want: nil},
+		{name: `\s+ +空入力`, reg: regexp.MustCompile(`\s+`), b: "", want: []string{""}},
+		// 幅0にマッチしうるパターンでも空カラムを作らない
+		{name: `x*`, reg: regexp.MustCompile(`x*`), b: "abxxcd", want: []string{"a", "b", "c", "d"}},
+		{name: `\s*`, reg: regexp.MustCompile(`\s*`), b: "a b", want: []string{"a", "b"}},
+		// 末尾の区切りは空カラムを残す(現状の挙動を固定する)
+		{name: "末尾の区切り", reg: regexp.MustCompile(`,`), b: "a,b,", want: []string{"a", "b", ""}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ss(splitByRegexp(tt.reg, []byte(tt.b))); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("splitByRegexp() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNewPreSplitByRegexpIterator(t *testing.T) {
 	type args struct {
 		s   string
@@ -19,19 +51,19 @@ func TestNewPreSplitByRegexpIterator(t *testing.T) {
 		want *PreSplitIterator
 	}{
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d+`), re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
+			a:           bs("a", "b", "c", "d"),
 			reg:         regexp.MustCompile(`\d+`),
 			l:           4,
 			removeEmpty: false,
 		}},
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d`), re: true}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
+			a:           bs("a", "b", "c", "d"),
 			reg:         regexp.MustCompile(`\d`),
 			l:           4,
 			removeEmpty: true,
 		}},
 		{name: "", args: args{s: "a11b22c33d", reg: regexp.MustCompile(`\d`), re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "", "b", "", "c", "", "d"},
+			a:           bs("a", "", "b", "", "c", "", "d"),
 			reg:         regexp.MustCompile(`\d`),
 			l:           7,
 			removeEmpty: false,
@@ -58,22 +90,22 @@ func TestNewPreSplitIterator(t *testing.T) {
 		want *PreSplitIterator
 	}{
 		{name: "split by space(no remove-empty)", args: args{s: "a b c d", sep: " ", re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
-			sep:         " ",
+			a:           bs("a", "b", "c", "d"),
+			sep:         []byte(" "),
 			reg:         nil,
 			l:           4,
 			removeEmpty: false,
 		}},
 		{name: "split by space(remove-empty)", args: args{s: "a b   c d", sep: " ", re: true}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "c", "d"},
-			sep:         " ",
+			a:           bs("a", "b", "c", "d"),
+			sep:         []byte(" "),
 			reg:         nil,
 			l:           4,
 			removeEmpty: true,
 		}},
 		{name: "split by space(remove-empty)", args: args{s: "a b   c d", sep: " ", re: false}, want: &PreSplitIterator{
-			a:           []string{"a", "b", "", "", "c", "d"},
-			sep:         " ",
+			a:           bs("a", "b", "", "", "c", "d"),
+			sep:         []byte(" "),
 			reg:         nil,
 			l:           6,
 			removeEmpty: false,
@@ -107,13 +139,13 @@ func TestPreSplitIterator_ToArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &PreSplitIterator{
-				a:           tt.fields.a,
-				sep:         tt.fields.sep,
+				a:           bs(tt.fields.a...),
+				sep:         []byte(tt.fields.sep),
 				reg:         tt.fields.reg,
 				l:           tt.fields.l,
 				removeEmpty: tt.fields.removeEmpty,
 			}
-			if got := p.ToArray(); !reflect.DeepEqual(got, tt.want) {
+			if got := ss(p.ToArray()); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ToArray() = %v, want %v", got, tt.want)
 			}
 		})
@@ -142,21 +174,21 @@ func TestPreSplitIterator_Reset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &PreSplitIterator{
-				a:           tt.fields.a,
-				sep:         tt.fields.sep,
+				a:           bs(tt.fields.a...),
+				sep:         []byte(tt.fields.sep),
 				reg:         tt.fields.reg,
 				l:           tt.fields.l,
 				removeEmpty: tt.fields.removeEmpty,
 			}
 
-			p.Reset(tt.args.s)
+			p.Reset([]byte(tt.args.s))
 
 			as := assert.New(t)
 			as.Equal(4, p.l)
-			as.Equal([]string{"a", "b", "c", "d"}, p.a)
+			as.Equal(bs("a", "b", "c", "d"), p.a)
 			if p.reg == nil {
 				as.Nil(p.reg)
-				as.Equal(" ", p.sep)
+				as.Equal([]byte(" "), p.sep)
 			} else {
 				as.Equal(regexp.MustCompile(`\d+`), p.reg)
 			}
@@ -193,8 +225,8 @@ func TestPreSplitIterator_ElementAt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &PreSplitIterator{
-				a:           tt.fields.a,
-				sep:         tt.fields.sep,
+				a:           bs(tt.fields.a...),
+				sep:         []byte(tt.fields.sep),
 				reg:         tt.fields.reg,
 				l:           tt.fields.l,
 				removeEmpty: tt.fields.removeEmpty,
@@ -204,7 +236,7 @@ func TestPreSplitIterator_ElementAt(t *testing.T) {
 				t.Errorf("ElementAt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if string(got) != tt.want {
 				t.Errorf("ElementAt() got = %v, want %v", got, tt.want)
 			}
 		})
