@@ -6,7 +6,6 @@ import (
 
 // Query はクエリ文字列を表すやつ
 type Query string
-type QuerySlice []Query
 
 // start:stop:step
 // start:stop
@@ -17,10 +16,14 @@ var indexQueryValidator = regexp.MustCompile(`^(-?\d*)(:(-?\d*))?(:(-?\d*))?$`)
 // /start regexp/:endIndex
 var switchQueryValidator = regexp.MustCompile(`^(\d+|/.+/):(\+?\d+|/.+/)$`)
 
-func (q Query) isIndexQuery() bool {
-	return indexQueryValidator.MatchString(string(q))
+// matchIndexQuery はクエリが index/range クエリの形式にマッチするか判定し、
+// マッチした場合はサブマッチ結果を返す(マッチしなければ nil)
+func (q Query) matchIndexQuery() []string {
+	return indexQueryValidator.FindStringSubmatch(string(q))
 }
 
-func (q Query) isSwitchQuery() bool {
-	return switchQueryValidator.MatchString(string(q))
+// matchSwitchQuery はクエリが switch クエリの形式にマッチするか判定し、
+// マッチした場合はサブマッチ結果を返す(マッチしなければ nil)
+func (q Query) matchSwitchQuery() []string {
+	return switchQueryValidator.FindStringSubmatch(string(q))
 }
