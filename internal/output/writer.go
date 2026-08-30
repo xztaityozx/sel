@@ -2,11 +2,10 @@ package output
 
 import (
 	"bufio"
+	"fmt"
 	"io"
-	"text/template"
 
 	"github.com/xztaityozx/sel/internal/option"
-	"github.com/xztaityozx/sel/internal/sliceutil"
 )
 
 type Writer struct {
@@ -14,8 +13,9 @@ type Writer struct {
 	buf            *bufio.Writer
 	autoFlush      bool
 	writtenColumns int
-	outputTemplate *template.Template
-	column         []string
+	// template は --template が指定されているときだけ非 nil。
+	// このときカラムはデリミタではなくテンプレートのリテラルで繋がれる
+	template *option.Template
 	// pending は組み立て中の1行分のバイト列。行が完成する(WriteNewLine が呼ばれる)まで
 	// buf には書き込まない。こうしておくと、行の途中でエラーが起きて WriteNewLine まで
 	// 辿り着けなかったときに、その未完成の断片が buf に混ざらず、buf は常に完成した行だけを
@@ -27,11 +27,10 @@ var newLine = []byte("\n")
 
 func NewWriter(option option.Option, w io.Writer, autoFlush bool) *Writer {
 	return &Writer{
-		delimiter:      []byte(option.OutPutDelimiter),
-		buf:            bufio.NewWriter(w),
-		autoFlush:      autoFlush,
-		outputTemplate: option.Template,
-		column:         []string{},
+		delimiter: []byte(option.OutPutDelimiter),
+		buf:       bufio.NewWriter(w),
+		autoFlush: autoFlush,
+		template:  option.Template,
 	}
 }
 
@@ -40,12 +39,14 @@ func (w *Writer) Write(columns ...[]byte) error {
 		return nil
 	}
 
-	if w.outputTemplate != nil {
-		// テンプレートを使うときは、出力すべきすべてのカラムが揃ってから書き出すので、ここにはバッファに乗せるのみ
-		// 実際の書き込みは WriteNewLine() で行う。
-		// text/template に渡すために、ここでだけ文字列へコピーする
+	if w.template != nil {
+		// テンプレートのリテラルとカラムを交互に pending へ積んでいく。
+		// プレースホルダより多いカラムは書き出さずに捨てるが、数だけは数えておく
 		for _, v := range columns {
-			w.column = append(w.column, string(v))
+			if i := w.writtenColumns; i < w.template.Placeholders() {
+				w.pending = w.template.AppendColumn(w.pending, i, v)
+			}
+			w.writtenColumns++
 		}
 		return nil
 	}
@@ -72,18 +73,19 @@ func (w *Writer) Write(columns ...[]byte) error {
 	return nil
 }
 
-// WriteNewLine は改行を書き込む。テンプレートを利用している場合は、テンプレートを使った書き込みを行う
+// WriteNewLine は改行を書き込んで1行を完成させる。
+// テンプレートを利用している場合は、最後のプレースホルダより後ろのリテラルもここで書き込む
 func (w *Writer) WriteNewLine() error {
-	// ref: Write(columns ...string) error
-	if w.outputTemplate != nil {
-		err := w.outputTemplate.Execute(w.buf, w.column)
-		if err != nil {
-			return err
+	// ref: Write(columns ...[]byte) error
+	if w.template != nil {
+		if n := w.template.Placeholders(); w.writtenColumns < n {
+			// 埋まらなかったプレースホルダが残っている。組み立て中の行は捨てる
+			written := w.writtenColumns
+			w.writtenColumns = 0
+			w.pending = w.pending[:0]
+			return fmt.Errorf("template expects %d columns but query produced %d", n, written)
 		}
-		w.column = sliceutil.Reset(w.column)
-		w.writtenColumns = 0
-		_, err = w.buf.Write(newLine)
-		return err
+		w.pending = w.template.AppendTail(w.pending)
 	}
 
 	w.writtenColumns = 0

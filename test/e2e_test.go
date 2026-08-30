@@ -179,6 +179,46 @@ func Test_E2E(t *testing.T) {
 			expectedStderr: []string{""},
 			expectedError:  nil,
 		},
+		// --template は {} だけをプレースホルダとする独自記法で、text/template ではない。
+		// {{ }} が Go のテンプレートとして評価されないことを見る
+		{
+			name: "sel --template does not evaluate text/template actions",
+			input: input{
+				args:  []string{"--template", "x{{.}}y {}", "1"},
+				stdin: []string{"a b"},
+			},
+			expectedStdout: []string{"x{.}y a"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel --template '{{}} {}' prints a literal {}",
+			input: input{
+				args:  []string{"--template", "{{}} {}", "1"},
+				stdin: []string{"a b"},
+			},
+			expectedStdout: []string{"{} a"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel --template drops columns that have no placeholder",
+			input: input{
+				args:  []string{"--template", "{}-{}", "1", "2", "3"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"a-b"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel --template with too few queries exits with error",
+			input: input{
+				args:  []string{"--template", "{} {} {}", "1", "2"},
+				stdin: []string{"a b"},
+			},
+			expectExitError: true,
+		},
 		{
 			name: "sel -d , 3 print 3,7,11,...",
 			input: input{

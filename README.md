@@ -94,3 +94,32 @@ Use "sel [command] --help" for more information about a command.
 - index `0` refers to the entire line. (like `awk`)
 - slice notation
 - an empty delimiter (`-d ''`, `-g -d ''`) splits a line into runes. (like `gawk`'s `FS=""`)
+- template output (`-t`, `--template`)
+
+# Template
+`-t`/`--template` formats a line with its own tiny syntax. It is *not* Go's `text/template`.
+
+| notation | output |
+| --- | --- |
+| `{}` | the next selected column |
+| `{{` | a literal `{` |
+| `}}` | a literal `}` |
+| `{{}}` | a literal `{}` |
+
+Any other character, including an unmatched `{` or `}`, is written as-is.
+
+```console
+$ echo AAA BBB CCC | sel --template 'one: {} two: {} three: {}' 1 2 3
+one: AAA two: BBB three: CCC
+
+$ echo AAA BBB | sel --template '{"key": "{}"}' 1
+{"key": "AAA"}
+```
+
+Selecting more columns than there are placeholders drops the extras, while selecting
+fewer is an error.
+
+```console
+$ echo AAA BBB | sel --template '{} {} {}' 1 2
+sel: <stdin>:1: template expects 3 columns but query produced 2
+```

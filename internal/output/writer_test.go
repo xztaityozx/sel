@@ -3,10 +3,8 @@ package output
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"testing"
-	"text/template"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/xztaityozx/sel/internal/option"
@@ -92,6 +90,77 @@ func TestWriter_Write_PartialLineNotFlushed(t *testing.T) {
 	assert.Equal(t, "complete\n", buf.String())
 }
 
+// newTemplateWriter は --template を指定した Writer を作るテストヘルパ
+func newTemplateWriter(w io.Writer, tmpl string) *Writer {
+	return NewWriter(option.Option{
+		DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "},
+		Template:        option.ParseTemplate(tmpl),
+	}, w, false)
+}
+
+func TestWriter_Template(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		columns  []string
+		want     string
+	}{
+		{name: "プレースホルダとカラムが交互に並ぶ", template: "one: {} two: {}", columns: []string{"a", "b"}, want: "one: a two: b\n"},
+		{name: "先頭と末尾のリテラルなし", template: "{}{}", columns: []string{"a", "b"}, want: "ab\n"},
+		{name: "{{ と }} はリテラルの波括弧になる", template: "x{{.}}y {}", columns: []string{"a"}, want: "x{.}y a\n"},
+		{name: "{{}} はリテラルの {} になる", template: "{{}} {}", columns: []string{"a"}, want: "{} a\n"},
+		{name: "プレースホルダより多いカラムは捨てられる", template: "{}-{}", columns: []string{"a", "b", "c"}, want: "a-b\n"},
+		{name: "プレースホルダなしならリテラルだけが出る", template: "no placeholder", columns: nil, want: "no placeholder\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			w := newTemplateWriter(buf, tt.template)
+
+			for _, c := range tt.columns {
+				assert.NoError(t, w.Write([]byte(c)))
+			}
+			assert.NoError(t, w.WriteNewLine())
+			assert.NoError(t, w.Flush())
+
+			assert.Equal(t, tt.want, buf.String())
+		})
+	}
+}
+
+// TestWriter_Template_NotEnoughColumns は、プレースホルダを埋めきれなかったときに
+// 自前のエラーを返し、書きかけの行を漏らさないことを確認する
+func TestWriter_Template_NotEnoughColumns(t *testing.T) {
+	buf := &bytes.Buffer{}
+	w := newTemplateWriter(buf, "{} {} {}")
+
+	assert.NoError(t, w.Write([]byte("a")))
+	assert.NoError(t, w.Write([]byte("b")))
+
+	err := w.WriteNewLine()
+	assert.EqualError(t, err, "template expects 3 columns but query produced 2")
+
+	assert.NoError(t, w.Flush())
+	assert.Equal(t, "", buf.String())
+}
+
+// TestWriter_Template_MultipleLines は行をまたいでも状態が持ち越されないことを確認する
+func TestWriter_Template_MultipleLines(t *testing.T) {
+	buf := &bytes.Buffer{}
+	w := newTemplateWriter(buf, "[{}:{}]")
+
+	for _, cols := range [][]string{{"a", "b"}, {"c", "d"}} {
+		for _, c := range cols {
+			assert.NoError(t, w.Write([]byte(c)))
+		}
+		assert.NoError(t, w.WriteNewLine())
+	}
+	assert.NoError(t, w.Flush())
+
+	assert.Equal(t, "[a:b]\n[c:d]\n", buf.String())
+}
+
 func BenchmarkWriter_Write(b *testing.B) {
 	w := NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, io.Discard, false)
 	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e")}
@@ -103,22 +172,7 @@ func BenchmarkWriter_Write(b *testing.B) {
 }
 
 func BenchmarkWriter_WriteNewLine_Template(b *testing.B) {
-	// テンプレート: "{} {} {} {} {}" → "{{ index . 0 }} {{ index . 1 }} ..."
-	tmplStr := ""
-	for i := 0; i < 5; i++ {
-		if i > 0 {
-			tmplStr += " "
-		}
-		tmplStr += fmt.Sprintf("{{ index . %d }}", i)
-	}
-	tmpl := template.Must(template.New("bench").Parse(tmplStr))
-
-	w := &Writer{
-		delimiter:      []byte(" "),
-		buf:            bufio.NewWriter(io.Discard),
-		outputTemplate: tmpl,
-		column:         []string{},
-	}
+	w := newTemplateWriter(io.Discard, "{} {} {} {} {}")
 
 	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e")}
 	b.ResetTimer()

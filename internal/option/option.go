@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/template"
 
 	"github.com/spf13/viper"
 )
@@ -18,7 +17,7 @@ type Option struct {
 	// XSV support
 	Xsv
 	// --template
-	Template *template.Template
+	Template *Template
 }
 
 // DelimiterOption is setting for --input/output-delimiter option
@@ -143,13 +142,9 @@ func NewOption(v *viper.Viper) (Option, error) {
 	useRegexp := v.GetBool(NameUseRegexp) || v.GetBool(NameFieldSplit)
 
 	// --templateオプションで出力のフォーマットを指定するやつ
-	var tmpl *template.Template
-	if v.GetString(NameTemplate) != DefaultTemplate {
-		var err error
-		tmpl, err = parseTemplate(v.GetString(NameTemplate))
-		if err != nil {
-			return Option{}, err
-		}
+	var tmpl *Template
+	if s := v.GetString(NameTemplate); s != DefaultTemplate {
+		tmpl = ParseTemplate(s)
 	}
 
 	fillMissing := v.GetString(NameFillMissing)
@@ -172,25 +167,4 @@ func NewOption(v *viper.Viper) (Option, error) {
 		},
 		Template: tmpl,
 	}, nil
-}
-
-func parseTemplate(input string) (*template.Template, error) {
-	var result string
-
-	// input ::= char | marker | input
-	// char ::= 任意の文字
-	// marker ::= {}
-	cnt := 0
-	for i := 0; i < len(input); i++ {
-		switch {
-		case input[i] == '{' && i+1 < len(input) && input[i+1] == '}':
-			result += fmt.Sprintf("{{ index . %d }}", cnt)
-			cnt++
-			i++
-		default:
-			result += string(input[i])
-		}
-	}
-
-	return template.New("output").Parse(result)
 }
