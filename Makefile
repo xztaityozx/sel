@@ -18,3 +18,7 @@ build: $(EXECUTABLE_FILE)
 .PHONY: test
 test: build
 	@go test -v ./...
+
+.PHONY: ci-lint
+ci-lint:
+	mise exec -- golangci-lint run
