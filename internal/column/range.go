@@ -26,7 +26,7 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 
 	if start == stop {
 		if start > m || start < 1 {
-			return fmt.Errorf("index out of range")
+			return fmt.Errorf("index %d: %w", start, iterator.ErrIndexOutOfRange)
 		}
 		return w.Write(columns[start-1])
 	}
