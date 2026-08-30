@@ -14,11 +14,26 @@ import (
 // BenchmarkPipeline は Source → Columns → output.Writer という実行時と同じ経路を回す。
 // 個々の Iterator ではなくパイプライン全体を見るので、行あたりのアロケーションの回帰を検出できる
 func BenchmarkPipeline(b *testing.B) {
-	const lines = 200000
+	benchmarkPipeline(b, 10, 5)
+}
+
+// BenchmarkPipelineWide はカラム数の多い行で後ろの方のカラムを選ぶ。
+// front を最後まで伸ばす経路なので、Reset がバッファを使い回せているかがここに出る
+func BenchmarkPipelineWide(b *testing.B) {
+	benchmarkPipeline(b, 100, 99)
+}
+
+// benchmarkPipeline は numColumns カラムの行を並べた入力を流して idx 番目のカラムを取り出す
+func benchmarkPipeline(b *testing.B, numColumns, idx int) {
+	// 1カラムは "col%d_%07d" + 区切りで十数バイト。行数をカラム数に反比例させて
+	// 入力全体のバイト数を揃える。カラム数だけ増やすと数百MBの入力を積むことになる
+	const cells = 2000000
+	lines := cells / numColumns
 
 	var data bytes.Buffer
+	data.Grow(cells * 14)
 	for i := 0; i < lines; i++ {
-		for c := 0; c < 10; c++ {
+		for c := 0; c < numColumns; c++ {
 			if c > 0 {
 				data.WriteByte(' ')
 			}
@@ -54,7 +69,7 @@ func BenchmarkPipeline(b *testing.B) {
 				b.Fatal(err)
 			}
 
-			s, err := columns.ElementAt(5)
+			s, err := columns.ElementAt(idx)
 			if err != nil {
 				b.Fatal(err)
 			}
