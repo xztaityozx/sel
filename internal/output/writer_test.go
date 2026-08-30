@@ -145,6 +145,44 @@ func TestWriter_Template_NotEnoughColumns(t *testing.T) {
 	assert.Equal(t, "", buf.String())
 }
 
+// TestWriter_WriteMissing は範囲外カラムの埋め方が、テンプレートの有無で
+// 期待通りに変わることを確認する。テンプレートなしでは空の fill で区切り文字を増やさず、
+// テンプレートありでは空でもプレースホルダを1つ消費する
+func TestWriter_WriteMissing(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		fill     string
+		want     string
+	}{
+		{name: "テンプレートなし・空の fill は何も足さない", template: "", fill: "", want: "a\n"},
+		{name: "テンプレートなし・fill ありは1カラムとして書く", template: "", fill: "x", want: "a x\n"},
+		{name: "テンプレートあり・空の fill でもプレースホルダを埋める", template: "1st={} 5th={}", fill: "", want: "1st=a 5th=\n"},
+		{name: "テンプレートあり・fill ありはその値で埋める", template: "1st={} 5th={}", fill: "x", want: "1st=a 5th=x\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			var w *Writer
+			if tt.template == "" {
+				w = NewWriter(option.Option{
+					DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "},
+				}, buf, false)
+			} else {
+				w = newTemplateWriter(buf, tt.template)
+			}
+
+			assert.NoError(t, w.Write([]byte("a")))
+			assert.NoError(t, w.WriteMissing([]byte(tt.fill)))
+			assert.NoError(t, w.WriteNewLine())
+			assert.NoError(t, w.Flush())
+
+			assert.Equal(t, tt.want, buf.String())
+		})
+	}
+}
+
 // TestWriter_Template_MultipleLines は行をまたいでも状態が持ち越されないことを確認する
 func TestWriter_Template_MultipleLines(t *testing.T) {
 	buf := &bytes.Buffer{}

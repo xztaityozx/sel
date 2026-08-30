@@ -253,10 +253,8 @@ func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Se
 		err := selector.Select(w, columns)
 		if err != nil {
 			if filler.enabled && iterator.IsIndexOutOfRange(err) {
-				if len(filler.fill) != 0 {
-					if werr := w.Write(filler.fill); werr != nil {
-						return &selectError{query: query, err: werr}
-					}
+				if werr := w.WriteMissing(filler.fill); werr != nil {
+					return &selectError{query: query, err: werr}
 				}
 				continue
 			}

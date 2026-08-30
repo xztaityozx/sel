@@ -73,6 +73,16 @@ func (w *Writer) Write(columns ...[]byte) error {
 	return nil
 }
 
+// WriteMissing は範囲外だったカラムのぶんを書く。
+// fill が空のとき、テンプレートなしなら何も書かない(空カラムを足すと区切り文字だけが増えてしまう)が、
+// テンプレートありならプレースホルダを空文字で埋めて数を合わせる
+func (w *Writer) WriteMissing(fill []byte) error {
+	if len(fill) == 0 && w.template == nil {
+		return nil
+	}
+	return w.Write(fill)
+}
+
 // WriteNewLine は改行を書き込んで1行を完成させる。
 // テンプレートを利用している場合は、最後のプレースホルダより後ろのリテラルもここで書き込む
 func (w *Writer) WriteNewLine() error {

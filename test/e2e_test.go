@@ -211,6 +211,28 @@ func Test_E2E(t *testing.T) {
 			expectedStderr: []string{""},
 			expectedError:  nil,
 		},
+		// -M/-E は「範囲外のカラムを空文字で埋める」フラグなので、
+		// テンプレートのプレースホルダもちゃんと埋まってほしい
+		{
+			name: "sel -M --template fills out-of-range placeholders with an empty string",
+			input: input{
+				args:  []string{"-M", "--template", "1st={} 5th={}", "1", "5"},
+				stdin: []string{"a b"},
+			},
+			expectedStdout: []string{"1st=a 5th="},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -E --template fills out-of-range placeholders with the fill value",
+			input: input{
+				args:  []string{"-E", "x", "--template", "1st={} 5th={}", "1", "5"},
+				stdin: []string{"a b"},
+			},
+			expectedStdout: []string{"1st=a 5th=x"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
 		{
 			name: "sel --template with too few queries exits with error",
 			input: input{

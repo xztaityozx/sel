@@ -123,3 +123,10 @@ fewer is an error.
 $ echo AAA BBB | sel --template '{} {} {}' 1 2
 sel: <stdin>:1: template expects 3 columns but query produced 2
 ```
+
+`-M`/`-E` fill out-of-range columns, so their placeholders are filled too.
+
+```console
+$ echo AAA BBB | sel -M --template '1st={} 5th={}' 1 5
+1st=AAA 5th=
+```
