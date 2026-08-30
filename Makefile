@@ -2,6 +2,8 @@
 DIST_DIR := dist
 EXECUTABLE_FILE := $(DIST_DIR)/sel
 
+$(EXECUTABLE_FILE): $(shell find . -name '*.go')
+
 .PHONY: all
 all: clean test build
 
@@ -16,7 +18,7 @@ $(EXECUTABLE_FILE):
 build: $(EXECUTABLE_FILE)
 
 .PHONY: test
-test: build
+test: clean build
 	@go test -v ./...
 
 .PHONY: ci-lint
