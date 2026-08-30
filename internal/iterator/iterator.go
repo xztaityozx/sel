@@ -49,11 +49,14 @@ type Iterator struct {
 	a [][]byte
 }
 
-var IndexOutOfRange = "index out of range"
+// ErrIndexOutOfRange は範囲外アクセスを表す sentinel error。
+// 生成側は fmt.Errorf("...: %w", ErrIndexOutOfRange) で wrap し、
+// 判定側は errors.Is / IsIndexOutOfRange で見る
+var ErrIndexOutOfRange = errors.New("index out of range")
 
 // IsIndexOutOfRange は err が範囲外アクセスによるものかどうかを判定する
 func IsIndexOutOfRange(err error) bool {
-	return err != nil && err.Error() == IndexOutOfRange
+	return errors.Is(err, ErrIndexOutOfRange)
 }
 
 func (i *Iterator) String() string {
@@ -71,7 +74,7 @@ func (i *Iterator) Reset(b []byte) {
 // ElementAt は指定したインデックスの値を返す。1-indexed
 func (i *Iterator) ElementAt(idx int) ([]byte, error) {
 	if idx == 0 {
-		return nil, errors.New(IndexOutOfRange)
+		return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 	}
 
 	if idx > 0 {
@@ -99,7 +102,7 @@ func (i *Iterator) ElementAt(idx int) ([]byte, error) {
 			return i.back[len(i.back)-1-backIdx], nil
 		}
 
-		return nil, errors.New(IndexOutOfRange)
+		return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 	}
 
 	// 負のインデックス: back スライスを使用
@@ -129,7 +132,7 @@ func (i *Iterator) ElementAt(idx int) ([]byte, error) {
 		}
 	}
 
-	return nil, errors.New(IndexOutOfRange)
+	return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 }
 
 // next は先頭から次の要素を取り出す
@@ -274,7 +277,7 @@ type RegexpIterator struct {
 
 func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 	if idx == 0 {
-		return nil, errors.New(IndexOutOfRange)
+		return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 	}
 
 	if idx > 0 {
@@ -301,7 +304,7 @@ func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 			return r.back[len(r.back)-1-backIdx], nil
 		}
 
-		return nil, errors.New(IndexOutOfRange)
+		return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 	}
 
 	// 負のインデックス: 残りの文字列をすべて分割してから返す
@@ -354,7 +357,7 @@ func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 		}
 	}
 
-	return nil, errors.New(IndexOutOfRange)
+	return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 }
 
 // nextSepMatch は b の中の最初の「区切り」を [beg,end) で返す。

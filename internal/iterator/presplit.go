@@ -2,7 +2,7 @@ package iterator
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"regexp"
 )
 
@@ -17,12 +17,12 @@ type PreSplitIterator struct {
 
 func (p *PreSplitIterator) ElementAt(idx int) ([]byte, error) {
 	if p.l < idx {
-		return nil, errors.New(IndexOutOfRange)
+		return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 	}
 
 	if idx < 0 {
 		if -p.l > idx {
-			return nil, errors.New(IndexOutOfRange)
+			return nil, fmt.Errorf("index %d: %w", idx, ErrIndexOutOfRange)
 		}
 		return p.a[p.l+idx], nil
 	}
