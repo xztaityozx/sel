@@ -26,7 +26,7 @@ func NewIndexSelectorFromString(str string, def int) (IndexSelector, error) {
 func (i IndexSelector) Select(w *output.Writer, iter iterator.Columns) error {
 
 	if i.index == 0 {
-		return w.Write(iter.ToArray()...)
+		return w.WriteLine(iter.ToArray())
 	}
 
 	item, err := iter.ElementAt(i.index)

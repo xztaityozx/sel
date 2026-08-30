@@ -83,6 +83,58 @@ func (w *Writer) WriteMissing(fill []byte) error {
 	return w.Write(fill)
 }
 
+// WriteLine は index 0 (awk の $0 相当、行全体) を書く。
+// columns は iter.ToArray() の結果をそのまま渡す想定。
+// $0 は分割結果が何個あろうと「行全体」という1つの意味的な単位なので、
+// テンプレートを使っているときはプレースホルダを1つだけ消費する
+// (Write に columns をそのまま渡すと、分割された数だけプレースホルダを消費してしまう)。
+//
+// テンプレートなしのときは delimiter で繋いで書くだけなので、書き込まれるバイト列は
+// Write(columns...) をそのまま呼んだ場合と変わらない。ただし空行(columns の要素数が0)は
+// 「カラムが0個」ではなく「空文字列のカラムが1個」として扱う必要がある。
+// ToArray() は空入力に対してカラム0個を返す(分割の規則どおり)が、
+// そのまま Write に渡すと len(columns)==0 で何もしなくなり、
+// テンプレート使用時にプレースホルダを1つも消費できず「produced 0」エラーになってしまうため
+func (w *Writer) WriteLine(columns [][]byte) error {
+	if w.template == nil {
+		if len(columns) == 0 {
+			return w.Write([]byte{})
+		}
+		return w.Write(columns...)
+	}
+
+	if i := w.writtenColumns; i < w.template.Placeholders() {
+		w.pending = w.template.AppendLiteral(w.pending, i)
+		for j, v := range columns {
+			if j > 0 {
+				w.pending = append(w.pending, w.delimiter...)
+			}
+			w.pending = append(w.pending, v...)
+		}
+	}
+	w.writtenColumns++
+	return nil
+}
+
+// FillRemaining はテンプレート使用時に、埋まっていないプレースホルダをすべて fill で埋める。
+// IndexSelector の範囲外アクセスは selector.Select がエラーを返すので WriteMissing で個別に埋められるが、
+// RangeSelector は列数が足りなくてもエラーにせず黙って少ない列数で書き出す(クランプする)ため、
+// そのエラーを起点にした補完ができない。そこで行の終わりにこれを呼び、
+// -M/-E が有効なときは残ったプレースホルダをまとめて埋める。
+// テンプレートを使っていないときは何もしない(range クエリの列不足は元々エラーではなく、
+// テンプレートなしの出力ではパディングもしない、という既存の挙動を変えないため)
+func (w *Writer) FillRemaining(fill []byte) error {
+	if w.template == nil {
+		return nil
+	}
+	for w.writtenColumns < w.template.Placeholders() {
+		if err := w.Write(fill); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // WriteNewLine は改行を書き込んで1行を完成させる。
 // テンプレートを利用している場合は、最後のプレースホルダより後ろのリテラルもここで書き込む
 func (w *Writer) WriteNewLine() error {

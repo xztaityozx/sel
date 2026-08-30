@@ -183,6 +183,89 @@ func TestWriter_WriteMissing(t *testing.T) {
 	}
 }
 
+// TestWriter_WriteLine は index 0 (行全体) の書き込みを確認する。
+// 分割結果が複数カラムでもテンプレートではプレースホルダを1つだけ消費すること、
+// 空行(カラム0個)は「カラムが0個」ではなく「空文字列のカラムが1個」として扱うことを見る
+func TestWriter_WriteLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		columns  [][]byte
+		want     string
+	}{
+		{name: "テンプレートなし・複数カラムはdelimiterで繋がる", template: "", columns: [][]byte{[]byte("a"), []byte("b")}, want: "a b\n"},
+		{name: "テンプレートなし・空行は空行のまま", template: "", columns: nil, want: "\n"},
+		{name: "テンプレートあり・複数カラムでもプレースホルダは1つだけ消費する", template: "<{}>", columns: [][]byte{[]byte("a"), []byte("b")}, want: "<a b>\n"},
+		{name: "テンプレートあり・空行はプレースホルダ1つを空文字で埋める", template: "<{}>", columns: nil, want: "<>\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			var w *Writer
+			if tt.template == "" {
+				w = NewWriter(option.Option{
+					DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "},
+				}, buf, false)
+			} else {
+				w = newTemplateWriter(buf, tt.template)
+			}
+
+			assert.NoError(t, w.WriteLine(tt.columns))
+			assert.NoError(t, w.WriteNewLine())
+			assert.NoError(t, w.Flush())
+
+			assert.Equal(t, tt.want, buf.String())
+		})
+	}
+}
+
+// TestWriter_FillRemaining は、range クエリのようにエラーを出さずに列数が足りないまま
+// 終わったときでも、行末で残りのプレースホルダをまとめて埋められることを確認する
+func TestWriter_FillRemaining(t *testing.T) {
+	tests := []struct {
+		name    string
+		written []string
+		fill    string
+		want    string
+	}{
+		{name: "残りが1個なら1個だけ埋める", written: []string{"a"}, fill: "", want: "[a|]\n"},
+		{name: "fillありならその値で埋める", written: []string{"a"}, fill: "x", want: "[a|x]\n"},
+		{name: "1つも書かれていなければ全部埋める", written: nil, fill: "x", want: "[x|x]\n"},
+		{name: "すでに全部埋まっていれば何もしない", written: []string{"a", "b"}, fill: "x", want: "[a|b]\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			w := newTemplateWriter(buf, "[{}|{}]")
+
+			for _, c := range tt.written {
+				assert.NoError(t, w.Write([]byte(c)))
+			}
+			assert.NoError(t, w.FillRemaining([]byte(tt.fill)))
+			assert.NoError(t, w.WriteNewLine())
+			assert.NoError(t, w.Flush())
+
+			assert.Equal(t, tt.want, buf.String())
+		})
+	}
+}
+
+// TestWriter_FillRemaining_NoTemplate はテンプレートなしのときに no-op であることを確認する。
+// range クエリの列不足はテンプレートなしの出力ではパディングしない、という既存の挙動を守るため
+func TestWriter_FillRemaining_NoTemplate(t *testing.T) {
+	buf := &bytes.Buffer{}
+	w := NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, buf, false)
+
+	assert.NoError(t, w.Write([]byte("a")))
+	assert.NoError(t, w.FillRemaining([]byte("x")))
+	assert.NoError(t, w.WriteNewLine())
+	assert.NoError(t, w.Flush())
+
+	assert.Equal(t, "a\n", buf.String())
+}
+
 // TestWriter_Template_MultipleLines は行をまたいでも状態が持ち越されないことを確認する
 func TestWriter_Template_MultipleLines(t *testing.T) {
 	buf := &bytes.Buffer{}

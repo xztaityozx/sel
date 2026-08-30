@@ -124,9 +124,28 @@ $ echo AAA BBB | sel --template '{} {} {}' 1 2
 sel: <stdin>:1: template expects 3 columns but query produced 2
 ```
 
-`-M`/`-E` fill out-of-range columns, so their placeholders are filled too.
+`-M`/`-E` fill out-of-range columns, so their placeholders are filled too. This also
+applies when a range query (`1:10`, `1:`, ...) runs out of columns before it fills every
+placeholder it was assigned, not just a plain out-of-range index.
 
 ```console
 $ echo AAA BBB | sel -M --template '1st={} 5th={}' 1 5
 1st=AAA 5th=
+
+$ printf 'AAA BBB\nAAA\n' | sel -M --template '[{}|{}]' 1:2
+[AAA|BBB]
+[AAA|]
+```
+
+Without `-t`/`--template`, a range query never errors on short lines (it just prints
+fewer columns instead), and `-M`/`-E` has no effect there since there is nothing to pad.
+
+Index `0` (the entire line) always fills exactly one placeholder, even when it is
+made of several columns joined by the output delimiter, or when the line is empty.
+
+```console
+$ printf 'a b\n\nc d\n' | sel --template '<{}>' 0
+<a b>
+<>
+<c d>
 ```

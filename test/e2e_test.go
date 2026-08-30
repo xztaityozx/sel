@@ -241,6 +241,59 @@ func Test_E2E(t *testing.T) {
 			},
 			expectExitError: true,
 		},
+		// index 0 ($0相当) は行全体という1つの意味的な単位なので、
+		// テンプレートではプレースホルダを1つだけ消費してほしい。分割数だけ消費してしまうと
+		// 空行(分割結果が0個)のときにプレースホルダを埋められず全体が異常終了してしまう
+		{
+			name: "sel --template '<{}>' 0 treats a blank line as one empty column, not zero",
+			input: input{
+				args:  []string{"--template", "<{}>", "0"},
+				stdin: []string{"a b", "", "c d"},
+			},
+			expectedStdout: []string{"<a b>", "<>", "<c d>"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -M --template '<{}>' 0 keeps working the same way with -M",
+			input: input{
+				args:  []string{"-M", "--template", "<{}>", "0"},
+				stdin: []string{"a b", "", "c d"},
+			},
+			expectedStdout: []string{"<a b>", "<>", "<c d>"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		// -M/-E は index クエリの範囲外だけでなく、range クエリが列数不足を
+		// エラーにせずクランプしたときも、テンプレートの残ったプレースホルダを埋めてほしい
+		{
+			name: "sel -M --template range query pads the missing placeholder instead of erroring",
+			input: input{
+				args:  []string{"-M", "--template", "[{}|{}]", "1:2"},
+				stdin: []string{"a b", "a"},
+			},
+			expectedStdout: []string{"[a|b]", "[a|]"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -E --template range query fills the missing placeholder with the fill value",
+			input: input{
+				args:  []string{"-E", "x", "--template", "[{}|{}]", "1:2"},
+				stdin: []string{"a b", "a"},
+			},
+			expectedStdout: []string{"[a|b]", "[a|x]"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel --template range query without -M/-E still exits with error on short lines",
+			input: input{
+				args:  []string{"--template", "[{}|{}]", "1:2"},
+				stdin: []string{"a b", "a"},
+			},
+			expectExitError: true,
+		},
 		{
 			name: "sel -d , 3 print 3,7,11,...",
 			input: input{

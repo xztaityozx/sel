@@ -56,8 +56,15 @@ func (t *Template) Placeholders() int {
 
 // AppendColumn は index 番目のプレースホルダの直前のリテラルと column を dst に足して返す
 func (t *Template) AppendColumn(dst []byte, index int, column []byte) []byte {
-	dst = append(dst, t.literals[index]...)
+	dst = t.AppendLiteral(dst, index)
 	return append(dst, column...)
+}
+
+// AppendLiteral は index 番目のプレースホルダの直前のリテラルだけを dst に足して返す。
+// index 0 (行全体) のように、複数のバイト列を1つのプレースホルダ値としてまとめて
+// 書き出したいときに、リテラルの追加と値の追加を分けて呼べるようにするためのもの
+func (t *Template) AppendLiteral(dst []byte, index int) []byte {
+	return append(dst, t.literals[index]...)
 }
 
 // AppendTail は最後のプレースホルダより後ろのリテラルを dst に足して返す
