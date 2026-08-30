@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"unicode/utf8"
-
-	"github.com/xztaityozx/sel/internal/sliceutil"
 )
 
 // 区切りについての約束ごと:
@@ -63,11 +61,15 @@ func (i *Iterator) String() string {
 	return fmt.Sprintf("{\n\tsep: '%s',\n\tsepLen: %d,\n\tfront: %s,\n\tback: %s\n\tremaining: '%s'\n}", i.sep, i.sepLen, i.front, i.back, i.remaining)
 }
 
-// Reset はこのイテレーターをリセットする
+// Reset はこのイテレーターをリセットする。
+// front/back は [:0] にするだけで backing array を手放さない。Reset は1行ごとに呼ばれるので、
+// 持ち続けても常駐は「その入力の最大カラム数1行ぶん」で頭打ちになるし、
+// 手放してしまうとカラム数の多い行では毎行取り直すことになって再利用の意味がなくなる。
+// lineSource.buf や csvSource のバッファが高水位を持ち続けているのと同じ扱い
 func (i *Iterator) Reset(b []byte) {
 	i.remaining = b
-	i.front = sliceutil.Reset(i.front)
-	i.back = sliceutil.Reset(i.back)
+	i.front = i.front[:0]
+	i.back = i.back[:0]
 	i.a = nil
 }
 
@@ -441,10 +443,11 @@ func (r *RegexpIterator) ToArray() [][]byte {
 	return a
 }
 
+// Reset はこのイテレーターをリセットする。front/back を手放さない理由は Iterator.Reset を参照
 func (r *RegexpIterator) Reset(b []byte) {
 	r.s = b
-	r.front = sliceutil.Reset(r.front)
-	r.back = sliceutil.Reset(r.back)
+	r.front = r.front[:0]
+	r.back = r.back[:0]
 	r.a = nil
 }
 
