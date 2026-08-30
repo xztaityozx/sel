@@ -97,8 +97,6 @@ const (
 	DefaultTemplate    = ""
 )
 
-type SplitStrategy int
-
 func GetOptionNames() []string {
 	return []string{
 		NameInputFiles,
