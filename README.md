@@ -94,3 +94,58 @@ Use "sel [command] --help" for more information about a command.
 - index `0` refers to the entire line. (like `awk`)
 - slice notation
 - an empty delimiter (`-d ''`, `-g -d ''`) splits a line into runes. (like `gawk`'s `FS=""`)
+- template output (`-t`, `--template`)
+
+# Template
+`-t`/`--template` formats a line with its own tiny syntax. It is *not* Go's `text/template`.
+
+| notation | output |
+| --- | --- |
+| `{}` | the next selected column |
+| `{{` | a literal `{` |
+| `}}` | a literal `}` |
+| `{{}}` | a literal `{}` |
+
+Any other character, including an unmatched `{` or `}`, is written as-is.
+
+```console
+$ echo AAA BBB CCC | sel --template 'one: {} two: {} three: {}' 1 2 3
+one: AAA two: BBB three: CCC
+
+$ echo AAA BBB | sel --template '{"key": "{}"}' 1
+{"key": "AAA"}
+```
+
+Selecting more columns than there are placeholders drops the extras, while selecting
+fewer is an error.
+
+```console
+$ echo AAA BBB | sel --template '{} {} {}' 1 2
+sel: <stdin>:1: template expects 3 columns but query produced 2
+```
+
+`-M`/`-E` fill out-of-range columns, so their placeholders are filled too. This also
+applies when a range query (`1:10`, `1:`, ...) runs out of columns before it fills every
+placeholder it was assigned, not just a plain out-of-range index.
+
+```console
+$ echo AAA BBB | sel -M --template '1st={} 5th={}' 1 5
+1st=AAA 5th=
+
+$ printf 'AAA BBB\nAAA\n' | sel -M --template '[{}|{}]' 1:2
+[AAA|BBB]
+[AAA|]
+```
+
+Without `-t`/`--template`, a range query never errors on short lines (it just prints
+fewer columns instead), and `-M`/`-E` has no effect there since there is nothing to pad.
+
+Index `0` (the entire line) always fills exactly one placeholder, even when it is
+made of several columns joined by the output delimiter, or when the line is empty.
+
+```console
+$ printf 'a b\n\nc d\n' | sel --template '<{}>' 0
+<a b>
+<>
+<c d>
+```

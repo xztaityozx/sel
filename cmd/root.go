@@ -253,10 +253,8 @@ func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Se
 		err := selector.Select(w, columns)
 		if err != nil {
 			if filler.enabled && iterator.IsIndexOutOfRange(err) {
-				if len(filler.fill) != 0 {
-					if werr := w.Write(filler.fill); werr != nil {
-						return &selectError{query: query, err: werr}
-					}
+				if werr := w.WriteMissing(filler.fill); werr != nil {
+					return &selectError{query: query, err: werr}
 				}
 				continue
 			}
@@ -266,6 +264,19 @@ func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Se
 			return &selectError{query: query, err: err}
 		}
 	}
+
+	// RangeSelector は列数が足りなくてもエラーにせず、黙って少ない列数で書き出す(クランプする)。
+	// そのため上のループでは IsIndexOutOfRange を検知できず、range クエリによる列不足には
+	// WriteMissing が発動しない。-M/-E が有効なら、行末でテンプレートの残りのプレースホルダを
+	// まとめて埋めることで、index クエリと同じく「範囲外は無効なくエラーにしない」を成立させる。
+	// テンプレートを使っていないときは FillRemaining は no-op で、range クエリの列不足を
+	// パディングしないという既存の挙動は変わらない
+	if filler.enabled {
+		if werr := w.FillRemaining(filler.fill); werr != nil {
+			return &selectError{err: werr}
+		}
+	}
+
 	if err := w.WriteNewLine(); err != nil {
 		return &selectError{err: err}
 	}

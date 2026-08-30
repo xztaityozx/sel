@@ -52,6 +52,7 @@ golangci-lint run
      - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
 
 4. **Output** (`internal/output/`) - `Writer` handles delimiter joining and template-based output
+   - `option.Template` (`internal/option/template.go`) parses `-t` into literal fragments. It is NOT `text/template`: `{}` is a placeholder, `{{`/`}}` are literal braces, everything else is copied as-is
 
 ### Key Design Decisions
 - **1-indexed columns**: Index `0` returns the entire line (like awk's `$0`)
@@ -68,4 +69,4 @@ golangci-lint run
 - `-r`: Remove empty columns
 - `-S`: Pre-split before selection
 - `--csv`/`--tsv`: CSV/TSV parsing mode
-- `-t`: Template output with `{}` placeholders
+- `-t`: Template output with `{}` placeholders (`{{`/`}}` escape a literal brace)

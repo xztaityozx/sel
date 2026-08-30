@@ -67,7 +67,9 @@ func (r RangeSelector) normalizeRange(m int) (start, stop, step int) {
 func (r RangeSelector) selectForward(w *output.Writer, columns [][]byte, start, stop, step int) error {
 	for i := start; i <= stop; i += step {
 		if i == 0 {
-			if err := w.Write(columns...); err != nil {
+			// i == 0 は index 0 (行全体) の指定。空行では columns が0個になりうるが、
+			// $0 は「カラムが0個」ではなく「空文字列のカラムが1個」として書く(WriteLine 参照)
+			if err := w.WriteLine(columns); err != nil {
 				return err
 			}
 		} else {
@@ -83,7 +85,9 @@ func (r RangeSelector) selectForward(w *output.Writer, columns [][]byte, start, 
 func (r RangeSelector) selectBackward(w *output.Writer, columns [][]byte, start, stop, step int) error {
 	for i := start; i >= stop; i += step {
 		if i == 0 {
-			if err := w.Write(columns...); err != nil {
+			// i == 0 は index 0 (行全体) の指定。空行では columns が0個になりうるが、
+			// $0 は「カラムが0個」ではなく「空文字列のカラムが1個」として書く(WriteLine 参照)
+			if err := w.WriteLine(columns); err != nil {
 				return err
 			}
 		} else {
