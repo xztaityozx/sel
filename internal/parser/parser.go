@@ -19,11 +19,11 @@ func Parse(args []string) ([]column.Selector, error) {
 		if query.isIndexQuery() {
 			querySection := strings.Split(string(query), ":")
 			if len(querySection) == 1 {
-				idx, err := strconv.Atoi(querySection[0])
+				sel, err := column.NewIndexSelectorFromString(querySection[0], 0)
 				if err != nil {
 					return nil, err
 				}
-				rt = append(rt, column.NewIndexSelector(idx))
+				rt = append(rt, sel)
 			} else if len(querySection) == 2 || len(querySection) == 3 {
 				start := 1
 				if len(querySection[0]) != 0 {
