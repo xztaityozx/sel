@@ -2,16 +2,18 @@ package column
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"github.com/xztaityozx/sel/internal/iterator"
-	"github.com/xztaityozx/sel/internal/option"
-	"github.com/xztaityozx/sel/internal/output"
-	"github.com/xztaityozx/sel/test"
 	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/option"
+	"github.com/xztaityozx/sel/internal/output"
+	"github.com/xztaityozx/sel/test"
 )
 
 func TestNewIndexSelectorFromString(t *testing.T) {
@@ -54,9 +56,9 @@ func TestNewIndexSelector(t *testing.T) {
 func TestIndexSelector_Select(t *testing.T) {
 
 	rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		var cols []string
-		for k := 0; k < 10; k++ {
+		for range 10 {
 			cols = append(cols, test.RandString(10))
 		}
 
@@ -68,10 +70,10 @@ func TestIndexSelector_Select(t *testing.T) {
 		writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, false)
 
 		err := is.Select(writer, iterator.NewIterator(strings.Join(cols, " "), " ", false))
-		assert.Nil(t, writer.WriteNewLine())
+		assert.NoError(t, writer.WriteNewLine())
 
-		assert.Nil(t, writer.Flush())
-		assert.Nil(t, err)
+		assert.NoError(t, writer.Flush())
+		assert.NoError(t, err)
 		if is.index == 0 {
 			assert.Equal(t, strings.Join(cols, " ")+"\n", w.String())
 		} else {

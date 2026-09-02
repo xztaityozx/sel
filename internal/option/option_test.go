@@ -1,16 +1,18 @@
 package option_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/spf13/viper"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/xztaityozx/sel/internal/option"
 )
 
@@ -32,29 +34,29 @@ func TestInputFiles_Enumerate(t *testing.T) {
 	_ = os.Chdir(base)
 	t.Run("Open出来ないファイルがあると例外が投げられる", func(t *testing.T) {
 		actual, err := option.InputFiles{Files: []string{"ないわよ"}}.Enumerate()
-		as.Error(err)
+		require.Error(t, err)
 		as.Nil(actual)
 
 		actual, err = option.InputFiles{Files: []string{"ないわよ"}}.Enumerate()
-		as.Error(err)
+		require.Error(t, err)
 		as.Nil(actual)
 	})
 
 	t.Run("OpenできるファイルのみならOK", func(t *testing.T) {
 		var files []string
-		for i := 0; i < 10; i++ {
-			f := filepath.Join(base, fmt.Sprint(i))
+		for i := range 10 {
+			f := filepath.Join(base, strconv.Itoa(i))
 			files = append(files, f)
 			_ = os.WriteFile(f, []byte("はい"), 0644)
 		}
 
 		a, err := option.InputFiles{Files: files}.Enumerate()
 
-		as.Nil(err)
-		as.Equal(10, len(a))
+		require.NoError(t, err)
+		as.Len(a, 10)
 
 		for i, v := range a {
-			as.Equal(filepath.Join(base, fmt.Sprint(i)), v)
+			as.Equal(filepath.Join(base, strconv.Itoa(i)), v)
 		}
 	})
 
@@ -76,11 +78,11 @@ func TestInputFiles_Enumerate(t *testing.T) {
 	t.Run("Globもいける", func(t *testing.T) {
 		a, err := option.InputFiles{Files: []string{filepath.Join(base, "*")}}.Enumerate()
 
-		as.Nil(err)
-		as.Equal(10, len(a))
+		require.NoError(t, err)
+		as.Len(a, 10)
 
 		for i, v := range a {
-			as.Equal(filepath.Join(base, fmt.Sprint(i)), v)
+			as.Equal(filepath.Join(base, strconv.Itoa(i)), v)
 		}
 	})
 

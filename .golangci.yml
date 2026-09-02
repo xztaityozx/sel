@@ -1,5 +1,34 @@
 version: "2"
 
+linters:
+  default: standard
+  enable:
+    - errorlint        # errors.Is/As を使わない error 比較
+    - forcetypeassert  # チェックなしの型アサーション
+    - gocritic         # 汎用診断 (regexpMust, ifElseChain など)
+    - intrange         # for i := range n
+    - makezero         # make([]T, n) に append する取り違え
+    - modernize        # 新しい標準ライブラリ機能への置き換え
+    - nilerr           # err != nil なのに nil を返す
+    - perfsprint       # fmt.Sprintf より速い変換がある箇所
+    - predeclared      # 組み込み識別子の再定義
+    - testifylint      # testify の使い方
+    - thelper          # ヘルパー関数の t.Helper() 忘れ
+    - unconvert        # 不要な型変換
+    - usestdlibvars    # 標準ライブラリの定数を使うべき箇所
+    - wastedassign     # 読まれない代入
+
+# 小さいリポジトリなので、同じ種類の指摘が既定値の3件で打ち切られると
+# 直し漏れが出る。全件出す
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
 formatters:
   enable:
     - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/xztaityozx/sel

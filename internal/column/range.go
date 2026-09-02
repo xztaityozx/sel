@@ -2,6 +2,7 @@ package column
 
 import (
 	"fmt"
+
 	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/output"
 )

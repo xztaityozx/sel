@@ -12,7 +12,7 @@ var testLineBytes = []byte(testLine)
 func BenchmarkIterator_ElementAt_First(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
@@ -21,7 +21,7 @@ func BenchmarkIterator_ElementAt_First(b *testing.B) {
 func BenchmarkIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
@@ -30,7 +30,7 @@ func BenchmarkIterator_ElementAt_Middle(b *testing.B) {
 func BenchmarkIterator_ElementAt_Last(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(100)
 	}
@@ -39,7 +39,7 @@ func BenchmarkIterator_ElementAt_Last(b *testing.B) {
 func BenchmarkIterator_ElementAt_Negative(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(-1)
 	}
@@ -48,7 +48,7 @@ func BenchmarkIterator_ElementAt_Negative(b *testing.B) {
 func BenchmarkIterator_ToArray(b *testing.B) {
 	iter := NewIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
@@ -57,7 +57,7 @@ func BenchmarkIterator_ToArray(b *testing.B) {
 func BenchmarkPreSplitIterator_ElementAt_First(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
@@ -66,7 +66,7 @@ func BenchmarkPreSplitIterator_ElementAt_First(b *testing.B) {
 func BenchmarkPreSplitIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
@@ -75,7 +75,7 @@ func BenchmarkPreSplitIterator_ElementAt_Middle(b *testing.B) {
 func BenchmarkPreSplitIterator_ElementAt_Last(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(100)
 	}
@@ -84,7 +84,7 @@ func BenchmarkPreSplitIterator_ElementAt_Last(b *testing.B) {
 func BenchmarkPreSplitIterator_ElementAt_Negative(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(-1)
 	}
@@ -93,7 +93,7 @@ func BenchmarkPreSplitIterator_ElementAt_Negative(b *testing.B) {
 func BenchmarkPreSplitIterator_ToArray(b *testing.B) {
 	iter := NewPreSplitIterator(testLine, " ", false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
@@ -104,7 +104,7 @@ var regexpSep = regexp.MustCompile(`\s+`)
 func BenchmarkRegexpIterator_ElementAt_First(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
@@ -113,7 +113,7 @@ func BenchmarkRegexpIterator_ElementAt_First(b *testing.B) {
 func BenchmarkRegexpIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
@@ -122,7 +122,7 @@ func BenchmarkRegexpIterator_ElementAt_Middle(b *testing.B) {
 func BenchmarkRegexpIterator_ElementAt_Last(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(100)
 	}
@@ -131,7 +131,7 @@ func BenchmarkRegexpIterator_ElementAt_Last(b *testing.B) {
 func BenchmarkRegexpIterator_ElementAt_Negative(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(-1)
 	}
@@ -140,7 +140,7 @@ func BenchmarkRegexpIterator_ElementAt_Negative(b *testing.B) {
 func BenchmarkRegexpIterator_ToArray(b *testing.B) {
 	iter := NewRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
@@ -149,7 +149,7 @@ func BenchmarkRegexpIterator_ToArray(b *testing.B) {
 func BenchmarkPreSplitByRegexpIterator_ElementAt_First(b *testing.B) {
 	iter := NewPreSplitByRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(1)
 	}
@@ -158,7 +158,7 @@ func BenchmarkPreSplitByRegexpIterator_ElementAt_First(b *testing.B) {
 func BenchmarkPreSplitByRegexpIterator_ElementAt_Middle(b *testing.B) {
 	iter := NewPreSplitByRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_, _ = iter.ElementAt(50)
 	}
@@ -167,7 +167,7 @@ func BenchmarkPreSplitByRegexpIterator_ElementAt_Middle(b *testing.B) {
 func BenchmarkPreSplitByRegexpIterator_ToArray(b *testing.B) {
 	iter := NewPreSplitByRegexpIterator(testLine, regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter.Reset(testLineBytes)
 		_ = iter.ToArray()
 	}
@@ -182,7 +182,7 @@ func BenchmarkRegexpIterator_ElementAt_Negative_VaryingColumns(b *testing.B) {
 	}
 	iter := NewRegexpIterator("", regexpSep, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		line := lines[i%len(lines)]
 		iter.Reset(line)
 		_, _ = iter.ElementAt(-1)
@@ -191,26 +191,26 @@ func BenchmarkRegexpIterator_ElementAt_Negative_VaryingColumns(b *testing.B) {
 
 // Compare strings.Split vs regexp.Split
 func BenchmarkStringsSplit(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = strings.Split(testLine, " ")
 	}
 }
 
 func BenchmarkRegexpSplit(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = regexpSep.Split(testLine, -1)
 	}
 }
 
 // Benchmark map allocation patterns
 func BenchmarkMapAllocation(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = make(map[int]string, 20)
 	}
 }
 
 func BenchmarkSliceAllocation(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = make([]string, 0, 100)
 	}
 }

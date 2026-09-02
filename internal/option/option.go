@@ -1,6 +1,7 @@
 package option
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,7 +47,7 @@ type InputFiles struct {
 // Enumerate /path/to/input/files
 func (ifs InputFiles) Enumerate() ([]string, error) {
 	if len(ifs.Files) == 0 {
-		return nil, fmt.Errorf("there are no files")
+		return nil, errors.New("there are no files")
 	}
 
 	var rt []string
@@ -59,12 +60,13 @@ func (ifs InputFiles) Enumerate() ([]string, error) {
 
 		for _, p := range expanded {
 			fi, err := os.Stat(p)
-			if err != nil {
+			switch {
+			case err != nil:
 				return nil, err
-			} else if !fi.Mode().IsRegular() {
-				return nil, fmt.Errorf("%s is not regular file", p)
-			} else if fi.IsDir() {
+			case fi.IsDir():
 				return nil, fmt.Errorf("%s is directory", p)
+			case !fi.Mode().IsRegular():
+				return nil, fmt.Errorf("%s is not regular file", p)
 			}
 
 			rt = append(rt, p)
@@ -72,7 +74,7 @@ func (ifs InputFiles) Enumerate() ([]string, error) {
 	}
 
 	if len(rt) == 0 {
-		return nil, fmt.Errorf("no files(path/glob is wrong?)")
+		return nil, errors.New("no files(path/glob is wrong?)")
 	}
 
 	return rt, nil
@@ -120,11 +122,12 @@ type Xsv struct {
 }
 
 func (x Xsv) IsXsv() (bool, rune) {
-	if x.Csv {
+	switch {
+	case x.Csv:
 		return true, ','
-	} else if x.Tsv {
+	case x.Tsv:
 		return true, '\t'
-	} else {
+	default:
 		return false, ','
 	}
 }

@@ -2,14 +2,17 @@ package column
 
 import (
 	"bytes"
+	"regexp"
+	"strings"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/option"
 	"github.com/xztaityozx/sel/internal/output"
 	"github.com/xztaityozx/sel/test"
-	"regexp"
-	"strings"
-	"testing"
 )
 
 func TestNewSwitchSelector(t *testing.T) {
@@ -76,7 +79,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 	}
 
 	var cols []string
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		cols = append(cols, test.RandString(10))
 	}
 
@@ -170,7 +173,7 @@ func TestSwitchSelector_Select(t *testing.T) {
 				end:   tt.fields.end,
 			}
 			err := s.Select(tt.args.w, tt.args.iter)
-			assert.Nil(t, tt.args.w.Flush())
+			require.NoError(t, tt.args.w.Flush())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Select() error = %v, wantErr %v", err, tt.wantErr)
 				return

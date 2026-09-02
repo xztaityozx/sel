@@ -2,10 +2,11 @@ package column
 
 import (
 	"fmt"
-	"github.com/xztaityozx/sel/internal/iterator"
-	"github.com/xztaityozx/sel/internal/output"
 	"regexp"
 	"strconv"
+
+	"github.com/xztaityozx/sel/internal/iterator"
+	"github.com/xztaityozx/sel/internal/output"
 )
 
 type address struct {
@@ -36,11 +37,11 @@ type SwitchSelector struct {
 
 // between は a を丸める
 // バグってるような気がしないでもない
-func between(a, max, min int) int {
-	if a < min {
+func between(a, hi, lo int) int {
+	if a < lo {
 		return 0
-	} else if a > max {
-		return max
+	} else if a > hi {
+		return hi
 	}
 
 	return a
@@ -76,10 +77,7 @@ func (s SwitchSelector) Select(w *output.Writer, iter iterator.Columns) error {
 		}
 	} else {
 		// 通常モード: 半分程度がマッチすると仮定
-		estimatedCap = maximum / 2
-		if estimatedCap < 8 {
-			estimatedCap = 8
-		}
+		estimatedCap = max(maximum/2, 8)
 	}
 
 	rt := make([][]byte, 0, estimatedCap)
@@ -116,9 +114,11 @@ func (s SwitchSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	return w.Write(rt...)
 }
 
-var numberAddress, _ = regexp.Compile(`^\d+$`)
-var regexpAddress, _ = regexp.Compile(`^/.+/$`)
-var aroundContextAddress, _ = regexp.Compile(`^[+-]\d+$`)
+var (
+	numberAddress        = regexp.MustCompile(`^\d+$`)
+	regexpAddress        = regexp.MustCompile(`^/.+/$`)
+	aroundContextAddress = regexp.MustCompile(`^[+-]\d+$`)
+)
 
 func newAddress(q string) (address, error) {
 	// 数値ならIndexの指定、そうでないなら正規表現としてコンパイルする

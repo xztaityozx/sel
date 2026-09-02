@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/xztaityozx/sel/internal/option"
 )
 
@@ -31,9 +32,9 @@ func TestNewIterator(t *testing.T) {
 			as.NotNil(got)
 			as.Equal(tt.args.s, string(got.remaining))
 			as.Equal(tt.args.sep, string(got.sep))
-			as.Equal(len(tt.args.sep), len(got.sep))
-			as.Equal(0, len(got.front))
-			as.Equal(0, len(got.back))
+			as.Len(got.sep, len(tt.args.sep))
+			as.Empty(got.front)
+			as.Empty(got.back)
 			as.Equal(tt.args.re, got.removeEmpty)
 		})
 	}
@@ -76,8 +77,8 @@ func TestIterator_Reset(t *testing.T) {
 			as.Equal(tt.fields.sepLen, i.sepLen)
 			as.Equal(tt.fields.removeEmpty, i.removeEmpty)
 			as.Equal(tt.args.s, string(i.remaining))
-			as.Equal(0, len(i.front))
-			as.Equal(0, len(i.back))
+			as.Empty(i.front)
+			as.Empty(i.back)
 			as.Nil(i.a)
 		})
 	}
@@ -298,8 +299,8 @@ func TestNewRegexpIterator(t *testing.T) {
 
 			as.Equal(tt.args.s, string(got.s))
 			as.Equal(tt.args.sep, got.sep)
-			as.Equal(0, len(got.front))
-			as.Equal(0, len(got.back))
+			as.Empty(got.front)
+			as.Empty(got.back)
 		})
 	}
 }
@@ -337,8 +338,8 @@ func TestRegexpIterator_Reset(t *testing.T) {
 
 			r.Reset([]byte(tt.args.s))
 
-			assert.Equal(t, 0, len(r.front))
-			assert.Equal(t, 0, len(r.back))
+			assert.Empty(t, r.front)
+			assert.Empty(t, r.back)
 			assert.Equal(t, tt.args.s, string(r.s))
 			assert.Nil(t, r.a)
 		})

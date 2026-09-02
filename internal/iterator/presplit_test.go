@@ -1,10 +1,11 @@
 package iterator
 
 import (
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestSplitByRegexp は splitByRegexp を直接見る。

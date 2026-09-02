@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	"github.com/xztaityozx/sel/internal/column"
 	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/option"
@@ -207,8 +208,7 @@ func run(input *os.File, source string, opt option.Option, w *output.Writer, sel
 			}
 			// CSV/TSVモードでは encoding/csv 自身が物理行番号を持っているので、
 			// 自前のレコードカウンタと矛盾しないようそちらを使う
-			var perr *csv.ParseError
-			if errors.As(nerr, &perr) {
+			if perr, ok := errors.AsType[*csv.ParseError](nerr); ok {
 				return &positionError{source: source, line: perr.Line, err: nerr}
 			}
 			return &positionError{source: source, line: line + 1, err: nerr}
