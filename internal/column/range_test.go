@@ -165,3 +165,25 @@ func BenchmarkRangeSelector_Select_Step(b *testing.B) {
 		_ = writer.WriteNewLine()
 	}
 }
+
+func TestRangeSelector_Select_OverNegative(t *testing.T) {
+	// 行のカラム数より大きい負の指定は解決しても負のままなので index 0 (行全体) に丸める。
+	// 丸めないと columns[i-1] が範囲外アクセスになって panic する
+	dataset := []struct {
+		name string
+		rs   RangeSelector
+	}{
+		{name: "-3:", rs: NewRangeSelector(-3, 1, -3, true)},
+		{name: "1:-5:-1", rs: NewRangeSelector(1, -1, -5, false)},
+	}
+
+	for _, v := range dataset {
+		t.Run(v.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, &buf, true)
+			require.NoError(t, v.rs.Select(writer, &testColumns{a: []string{"a"}}))
+			require.NoError(t, writer.Flush())
+			assert.Equal(t, "a a", buf.String())
+		})
+	}
+}

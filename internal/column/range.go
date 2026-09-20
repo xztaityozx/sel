@@ -27,6 +27,10 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 		// 空行。選べるカラムが1つもないので何も書かない。
 		// range クエリは行が短くても少ない数だけ書いてエラーにしない約束なので、その極端な場合として扱う
 		// (normalizeRange は stop を 0 に潰してしまい、start > stop = step の向き違いのエラーに化ける)
+		// ただし index 0 (行全体) を名指ししているときは、単項の 0 と同じく空文字列のカラム1個として書く
+		if r.includesWholeLine() {
+			return w.WriteLine(columns)
+		}
 		return nil
 	}
 
@@ -66,6 +70,15 @@ func (r RangeSelector) normalizeRange(m int) (start, stop, step int) {
 	}
 	if stop < 0 {
 		stop = m + stop + 1
+	}
+
+	// 行のカラム数より大きい負の指定(1カラムの行に対する -3 など)は解決しても負のままなので、
+	// index 0 (行全体) に丸める。丸めないと columns[i-1] が範囲外アクセスになる
+	if start < 0 {
+		start = 0
+	}
+	if stop < 0 {
+		stop = 0
 	}
 
 	return start, stop, r.step
@@ -140,9 +153,24 @@ func (r RangeSelector) markExcluded(mark []bool) error {
 		return nil
 	}
 
-	if start <= stop {
+	// Select と同じく、1カラムだけを指す範囲は step の向きを問わない
+	if start == stop {
+		markColumn(mark, start)
+		return nil
+	}
+
+	if start < stop {
 		if r.step < 0 {
 			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
+		}
+		// 反復範囲を行内([1, n])に詰める。詰めないと 2:100000000000 のような行より後ろまで
+		// 伸びた指定が行ごとに巨大なループになり、step 次第では i が溢れて負に回り込み終わらなくなる
+		if start < 1 {
+			// step の刻みを保ったまま、最初の行内カラムまで進める
+			start = 1 + ((start-1)%r.step+r.step)%r.step
+		}
+		if stop > n {
+			stop = n
 		}
 		for i := start; i <= stop; i += r.step {
 			markColumn(mark, i)
@@ -153,10 +181,23 @@ func (r RangeSelector) markExcluded(mark []bool) error {
 	if r.step > 0 {
 		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
 	}
+	// 前向きと同じ理由で反復範囲を行内に詰める
+	if d := -r.step; start > n {
+		start = n - ((n-start)%d+d)%d
+	}
+	if stop < 1 {
+		stop = 1
+	}
 	for i := start; i >= stop; i += r.step {
 		markColumn(mark, i)
 	}
 	return nil
+}
+
+// includesWholeLine はクエリが index 0 (行全体) を名指ししているかどうかを返す。
+// 負の値は行のカラム数で解決されるので、ここで見るのは書かれたままの 0 だけ
+func (r RangeSelector) includesWholeLine() bool {
+	return r.start == 0 || (!r.isInfStop && r.stop == 0)
 }
 
 // markColumn は行のカラム数に収まっている i だけに印をつける

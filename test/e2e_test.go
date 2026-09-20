@@ -1077,6 +1077,36 @@ func Test_E2E(t *testing.T) {
 			expectExitError: true,
 		},
 		{
+			// range に書いた 0 も単項の 0 と同じく、空行では空文字列のカラム1個として書く
+			name: "sel 0:1 writes $0 for empty lines",
+			input: input{
+				args:  []string{"-t", "[{}]", "0:1"},
+				stdin: []string{"x", "", "y"},
+			},
+			expectedStdout: []string{"[x]", "[]", "[y]"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 0:2 exits with error",
+			input: input{
+				args:  []string{"-x", "0:2"},
+				stdin: []string{"a b c"},
+			},
+			expectExitError: true,
+		},
+		{
+			// 行より後ろまで伸びた範囲でも行の外は舐めない(舐めると行ごとに巨大なループになる)
+			name: "sel -x 2:100000000000 drops the rest of the line",
+			input: input{
+				args:  []string{"-x", "2:100000000000"},
+				stdin: []string{"a b c d e"},
+			},
+			expectedStdout: []string{"a"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
 			name: "sel without queries and -x exits with error",
 			input: input{
 				args:  []string{},

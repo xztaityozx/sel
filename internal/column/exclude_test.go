@@ -1,6 +1,8 @@
 package column
 
 import (
+	"errors"
+	"math"
 	"strings"
 	"testing"
 
@@ -50,6 +52,13 @@ func TestExclusion_Apply(t *testing.T) {
 		{name: "行より後ろのrangeは無視", selectors: []Selector{NewRangeSelector(10, 1, 12, false)}, want: cols},
 		{name: "行より後ろの開いたrangeは無視", selectors: []Selector{NewRangeSelector(10, 1, 10, true)}, want: cols},
 		{name: "全部除外", selectors: []Selector{NewRangeSelector(1, 1, 1, true)}, want: nil},
+		// 行より後ろまで伸びた範囲は、行の外を舐めずに行内だけ落とす(舐めると行ごとに巨大なループになる)
+		{name: "行をはみ出すrange", selectors: []Selector{NewRangeSelector(2, 1, 100000000000, false)}, want: []string{"a"}},
+		{name: "行をはみ出すrangeとstep", selectors: []Selector{NewRangeSelector(1, 3, math.MaxInt64, false)}, want: []string{"b", "c", "e"}},
+		{name: "行をはみ出す逆順range", selectors: []Selector{NewRangeSelector(5, -1, -1000000000000, false)}, want: nil},
+		{name: "行をはみ出す逆順rangeとstep", selectors: []Selector{NewRangeSelector(math.MaxInt64, -2, 1, false)}, want: []string{"b", "d"}},
+		// start == stop は1カラムを指すだけなので step の向きは問わない(Select と同じ)
+		{name: "start == stop で負のstep", selectors: []Selector{NewRangeSelector(2, -1, 2, false)}, want: []string{"a", "c", "d", "e"}},
 	}
 
 	for _, tt := range tests {
@@ -132,5 +141,33 @@ func TestNewExclusion(t *testing.T) {
 		_, err := NewExclusion([]Selector{NewIndexSelector(0)}, []string{"0"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `"0"`)
+	})
+
+	t.Run("rangeに埋まったindex 0 も除外に使えない", func(t *testing.T) {
+		for _, tt := range []struct {
+			query string
+			sel   RangeSelector
+		}{
+			{query: "0:0", sel: NewRangeSelector(0, 1, 0, false)},
+			{query: "0:2", sel: NewRangeSelector(0, 1, 2, false)},
+			{query: "2:0", sel: NewRangeSelector(2, -1, 0, false)},
+			{query: "0:", sel: NewRangeSelector(0, 1, 0, true)},
+		} {
+			_, err := NewExclusion([]Selector{tt.sel}, []string{tt.query})
+			require.Error(t, err, tt.query)
+			assert.Contains(t, err.Error(), tt.query)
+		}
+	})
+
+	t.Run("実行時のエラーにもクエリが載る", func(t *testing.T) {
+		e, err := NewExclusion([]Selector{NewIndexSelector(1), NewRangeSelector(5, 1, 1, false)}, []string{"1", "5:1"})
+		require.NoError(t, err)
+
+		_, err = e.Apply(&testColumns{a: []string{"a", "b", "c"}})
+		require.Error(t, err)
+
+		xerr, ok := errors.AsType[*ExcludeError](err)
+		require.True(t, ok)
+		assert.Equal(t, "5:1", xerr.Query)
 	})
 }
