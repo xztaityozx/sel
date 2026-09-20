@@ -46,7 +46,7 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 		}
 		// 書かれたままの 0 は行全体の指定なので、行内には詰めずそのまま残す
-		start, stop = clampForward(start, stop, step, n, r.start != 0)
+		start, stop, step = clampForward(start, stop, step, n, r.start != 0)
 		if start > stop {
 			return nil
 		}
@@ -57,7 +57,7 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	if step > 0 {
 		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 	}
-	start, stop = clampBackward(start, stop, step, n, r.stop != 0)
+	start, stop, step = clampBackward(start, stop, step, n, r.stop != 0)
 	if start < stop {
 		return nil
 	}
@@ -127,28 +127,37 @@ func (r RangeSelector) resolve(n int) (start, stop int) {
 }
 
 // clampForward は前向きの反復範囲を行内([1, n])に詰める。詰めないと 2:100000000000 のような
-// 行より後ろまで伸びた指定が行ごとに巨大なループになり、step 次第では i が溢れて負に回り込み終わらなくなる。
+// 行より後ろまで伸びた指定が行ごとに巨大なループになる。
 // 行の先頭より前を指す start は step の刻みを保ったまま最初の行内カラムまで進める。
-// 詰めた結果 start > stop になったら、その行で選べるカラムは1つもない
-func clampForward(start, stop, step, n int, clampStart bool) (int, int) {
+// 詰めた結果 start > stop になったら、その行で選べるカラムは1つもない。
+// step も n まで詰める。行内に収まった範囲では n 以上の step はどれも「1回で範囲外」で
+// 結果が同じなので、これで i += step が桁溢れして負に回り込むのを防げる
+// (回り込むと i が行内に戻ってきて、選ぶはずのないカラムを選んでしまう)
+func clampForward(start, stop, step, n int, clampStart bool) (int, int, int) {
 	if clampStart && start < 1 {
 		start = 1 + ((start-1)%step+step)%step
 	}
 	if stop > n {
 		stop = n
 	}
-	return start, stop
+	if step > n && n > 0 {
+		step = n
+	}
+	return start, stop, step
 }
 
 // clampBackward は後ろ向きの反復範囲を行内([1, n])に詰める。理由と詰め方は clampForward と同じ
-func clampBackward(start, stop, step, n int, clampStop bool) (int, int) {
+func clampBackward(start, stop, step, n int, clampStop bool) (int, int, int) {
 	if d := -step; start > n {
 		start = n - ((n-start)%d+d)%d
 	}
 	if clampStop && stop < 1 {
 		stop = 1
 	}
-	return start, stop
+	if step < -n && n > 0 {
+		step = -n
+	}
+	return start, stop, step
 }
 
 // markExcluded は -x でこの範囲が指すカラムに印をつける。
@@ -171,22 +180,23 @@ func (r RangeSelector) markExcluded(mark []bool) {
 	}
 
 	// index 0 は NewExclusion が弾いているので、ここでは常に行内へ詰めてよい
+	step := r.step
 	if start < stop {
-		if r.step < 0 {
+		if step < 0 {
 			return
 		}
-		start, stop = clampForward(start, stop, r.step, n, true)
-		for i := start; i <= stop; i += r.step {
+		start, stop, step = clampForward(start, stop, step, n, true)
+		for i := start; i <= stop; i += step {
 			markColumn(mark, i)
 		}
 		return
 	}
 
-	if r.step > 0 {
+	if step > 0 {
 		return
 	}
-	start, stop = clampBackward(start, stop, r.step, n, true)
-	for i := start; i >= stop; i += r.step {
+	start, stop, step = clampBackward(start, stop, step, n, true)
+	for i := start; i >= stop; i += step {
 		markColumn(mark, i)
 	}
 }

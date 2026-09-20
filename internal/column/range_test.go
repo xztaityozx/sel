@@ -3,6 +3,7 @@ package column
 import (
 	"bytes"
 	"io"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -108,6 +109,28 @@ func TestRangeSelector_Select(t *testing.T) {
 			assert.NoError(t, writer.Flush())
 			assert.NoError(t, err)
 			assert.Empty(t, w.String())
+			w.Reset()
+		}
+	})
+
+	// 桁溢れした i が負に回り込んで行内に戻ってくると、選ぶはずのないカラムを選んでしまう
+	t.Run("行幅より大きいstepは1回しか進まない", func(t *testing.T) {
+		for _, v := range []struct {
+			start   int
+			step    int
+			stop    int
+			expects []int
+		}{
+			{start: 1, step: math.MaxInt64, stop: 20, expects: []int{0}},
+			{start: math.MinInt64, step: math.MaxInt64, stop: 20, expects: []int{19}},
+			{start: 20, step: math.MinInt64, stop: 1, expects: []int{19}},
+		} {
+			rs := NewRangeSelector(v.start, v.step, v.stop, false)
+			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
+			err := rs.Select(writer, &testColumns{a: cols})
+			require.NoError(t, writer.Flush())
+			require.NoError(t, err)
+			assert.Equal(t, strings.Join(expectFactory(v.expects), " "), w.String(), "start: %d, step: %d, stop: %d", v.start, v.step, v.stop)
 			w.Reset()
 		}
 	})

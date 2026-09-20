@@ -51,6 +51,10 @@ func TestExclusion_Apply(t *testing.T) {
 		{name: "行をはみ出すrangeとstep", selectors: []Selector{NewRangeSelector(1, 3, math.MaxInt64, false)}, want: []string{"b", "c", "e"}},
 		{name: "行をはみ出す逆順range", selectors: []Selector{NewRangeSelector(5, -1, -1000000000000, false)}, want: nil},
 		{name: "行をはみ出す逆順rangeとstep", selectors: []Selector{NewRangeSelector(math.MaxInt64, -2, 1, false)}, want: []string{"b", "d"}},
+		// 桁溢れした i が負に回り込んで行内に戻ってくると、除外するはずのないカラムを落としてしまう
+		{name: "行幅より大きいstep", selectors: []Selector{NewRangeSelector(1, math.MaxInt64, 5, false)}, want: []string{"b", "c", "d", "e"}},
+		{name: "行幅より大きいstepと行より前のstart", selectors: []Selector{NewRangeSelector(math.MinInt64, math.MaxInt64, 5, false)}, want: []string{"a", "b", "c", "d"}},
+		{name: "行幅より大きい負のstep", selectors: []Selector{NewRangeSelector(5, math.MinInt64, 1, false)}, want: []string{"a", "b", "c", "d"}},
 		// start == stop は1カラムを指すだけなので step の向きは問わない(Select と同じ)
 		{name: "start == stop で負のstep", selectors: []Selector{NewRangeSelector(2, -1, 2, false)}, want: []string{"a", "c", "d", "e"}},
 	}
