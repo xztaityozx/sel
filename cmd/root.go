@@ -34,7 +34,14 @@ var rootCmd = &cobra.Command{
 |___/\___|_|
 
 __sel__ect column`,
-	Args:          cobra.MinimumNArgs(1),
+	Args: func(cmd *cobra.Command, args []string) error {
+		// -x だけを指定して「除外以外は全部出す」という使い方を許す
+		exclude, _ := cmd.Flags().GetStringSlice(option.NameExclude)
+		if len(args) == 0 && len(exclude) == 0 {
+			return errors.New("requires at least 1 query")
+		}
+		return nil
+	},
 	Version:       Version,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,9 +52,22 @@ __sel__ect column`,
 		if err != nil {
 			return err
 		}
-		selectors, err := parser.Parse(args)
+		queries := args
+		if len(queries) == 0 {
+			// -x だけが指定されたとき。除外後に残った全カラムを出す
+			queries = []string{"1:"}
+		}
+		selectors, err := parser.Parse(queries)
 		if err != nil {
 			return err
+		}
+
+		var exclusion *column.Exclusion
+		if len(opt.Exclude) != 0 {
+			exclusion, err = parser.ParseExclude(opt.Exclude)
+			if err != nil {
+				return err
+			}
 		}
 
 		w := output.NewWriter(opt, os.Stdout, false)
@@ -63,7 +83,7 @@ __sel__ect column`,
 				if err != nil {
 					return err
 				}
-				if err := run(fp, file, opt, w, selectors, args); err != nil {
+				if err := run(fp, file, opt, w, selectors, queries, exclusion); err != nil {
 					return err
 				}
 			}
@@ -71,7 +91,7 @@ __sel__ect column`,
 			return nil
 		}
 
-		return run(os.Stdin, stdinSourceName, opt, w, selectors, args)
+		return run(os.Stdin, stdinSourceName, opt, w, selectors, queries, exclusion)
 	},
 }
 
@@ -95,6 +115,7 @@ func init() {
 	rootCmd.Flags().Bool(option.NameCsv, false, "parse input file as CSV")
 	rootCmd.Flags().Bool(option.NameTsv, false, "parse input file as TSV")
 	rootCmd.Flags().StringP(option.NameTemplate, "t", option.DefaultTemplate, "template for output")
+	rootCmd.Flags().StringSliceP(option.NameExclude, "x", nil, "exclude columns (index or range query)")
 	_ = rootCmd.MarkFlagFilename(option.NameInputFiles)
 	rootCmd.MarkFlagsMutuallyExclusive(option.NameCsv, option.NameTsv)
 
@@ -111,6 +132,7 @@ func init() {
 		"$ sel 2:: -f ./file",
 		"$ cat /path/to/file | sel /^begin/:/^end/",
 		"$ echo AAA BBB CCC | sel --template 'one: {} two: {} three: {}' 1 2 3",
+		"$ echo AAA BBB CCC | sel -x 2",
 	}
 
 	rootCmd.Example = strings.Join(examples, "\n\t")
@@ -126,6 +148,9 @@ Query:
 	start:/end regexp/           select columns from 'start' to /end regexp/
 	/start regexp/:end           select columns from /start regexp/ to 'end'
 	/start regexp/:/end regexp/  select columns from /start regexp/ to /end regexp/
+
+	-x/--exclude takes 'index' or 'start:stop[:step]' and drops those columns before
+	the queries are evaluated. Without queries, every remaining column is printed
 
 Examples:
 {{.Example}}{{if .HasAvailableSubCommands}}
@@ -166,7 +191,8 @@ func (e *positionError) Unwrap() error { return e.err }
 // run はあるファイルについて column.Selector によるカラム選択と column.Writer による書き出しを行う。ファイルはCloseされる
 // source はエラーメッセージに出す入力元の名前（ファイルパスか stdinSourceName）
 // queries は selectors と同じ順番のクエリ文字列で、エラーの発生位置を表すのに使う
-func run(input *os.File, source string, opt option.Option, w *output.Writer, selectors []column.Selector, queries []string) (err error) {
+// exclusion は -x が指定されているときだけ非 nil。選択より先にカラムを取り除く
+func run(input *os.File, source string, opt option.Option, w *output.Writer, selectors []column.Selector, queries []string, exclusion *column.Exclusion) (err error) {
 	var line int
 
 	// input のクローズ失敗は、他のエラーが既にあればそちらを優先して返す。
@@ -214,6 +240,11 @@ func run(input *os.File, source string, opt option.Option, w *output.Writer, sel
 			return &positionError{source: source, line: line + 1, err: nerr}
 		}
 		line++
+
+		if exclusion != nil {
+			// 除外を先に適用する。残ったカラムは1から番号付けし直されて selector に渡る
+			columns = exclusion.Apply(columns)
+		}
 
 		if serr := selectAll(columns, w, selectors, queries, filler); serr != nil {
 			return &positionError{source: source, line: line, query: serr.query, err: serr.err}
