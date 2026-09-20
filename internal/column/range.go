@@ -25,14 +25,13 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	start, stop := r.resolve(n)
 	step := r.step
 
-	// 前向きの開いた範囲(2: など)で start が行末を越えているのは、向きの食い違いではなく選べるカラムなし。
-	// 後ろ向き(5::-1 など)は stop が行末なので start > stop が正しい向きで、ここで打ち切ってはいけない
-	if r.isInfStop && r.step > 0 && start > stop {
+	// 開いた範囲(2: や 5::-1 など)で start が行の外側にあるのは、向きの食い違いではなく選べるカラムなし
+	if r.isInfStop && ((r.step > 0 && start > stop) || (r.step < 0 && start < stop)) {
 		return nil
 	}
 
 	if start == stop {
-		if start == 0 {
+		if r.includesWholeLine() {
 			// index 0 (行全体) だけを指している。単項の 0 と同じ扱い
 			return w.WriteLine(columns)
 		}
@@ -111,7 +110,11 @@ func (r RangeSelector) resolve(n int) (start, stop int) {
 		start = n + start + 1
 	}
 
+	// 開いた終端は範囲の向きにある行の端。前向きなら行末、後ろ向き(5::-1 など)なら先頭カラム
 	if r.isInfStop {
+		if r.step < 0 {
+			return start, 1
+		}
 		return start, n
 	}
 
@@ -155,8 +158,8 @@ func (r RangeSelector) markExcluded(mark []bool) error {
 	n := len(mark)
 	start, stop := r.resolve(n)
 
-	// Select と同じく、前向きの開いた範囲で start が行末を越えているのは除外対象なし
-	if r.isInfStop && r.step > 0 && start > stop {
+	// Select と同じく、開いた範囲で start が行の外側にあるのは除外対象なし
+	if r.isInfStop && ((r.step > 0 && start > stop) || (r.step < 0 && start < stop)) {
 		return nil
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/option"
 	"github.com/xztaityozx/sel/internal/output"
 )
@@ -174,13 +175,15 @@ func TestRangeSelector_Select_OutOfRange(t *testing.T) {
 		rs      RangeSelector
 		columns []string
 		want    string
+		wantErr bool
 	}{
 		{name: "-3:", rs: NewRangeSelector(-3, 1, -3, true), columns: []string{"a"}, want: "a"},
 		{name: "1:-5:-1", rs: NewRangeSelector(1, -1, -5, false), columns: []string{"a"}, want: "a"},
 		{name: "-4:", rs: NewRangeSelector(-4, 1, -4, true), columns: []string{"a", "b"}, want: "a b"},
 		{name: "-8:-1:2", rs: NewRangeSelector(-8, 2, -1, false), columns: []string{"a", "b"}, want: "a"},
 		{name: "10:1:-1", rs: NewRangeSelector(10, -1, 1, false), columns: []string{"a", "b", "c"}, want: "c b a"},
-		{name: "5::-1", rs: NewRangeSelector(5, -1, 0, true), columns: []string{"a", "b", "c"}, want: "c"},
+		{name: "5::-1", rs: NewRangeSelector(5, -1, 5, true), columns: []string{"a", "b", "c"}, want: "c b a"},
+		{name: "-4:-4", rs: NewRangeSelector(-4, 1, -4, false), columns: []string{"a", "b", "c"}, wantErr: true},
 		{name: "2:-8:-1", rs: NewRangeSelector(2, -1, -8, false), columns: []string{"a", "b", "c"}, want: "b a"},
 		{name: "10:12", rs: NewRangeSelector(10, 1, 12, false), columns: []string{"a", "b", "c"}, want: ""},
 		{name: "2:", rs: NewRangeSelector(2, 1, 2, true), columns: []string{"a"}, want: ""},
@@ -192,7 +195,12 @@ func TestRangeSelector_Select_OutOfRange(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, &buf, true)
-			require.NoError(t, v.rs.Select(writer, &testColumns{a: v.columns}))
+			err := v.rs.Select(writer, &testColumns{a: v.columns})
+			if v.wantErr {
+				assert.ErrorIs(t, err, iterator.ErrIndexOutOfRange)
+				return
+			}
+			require.NoError(t, err)
 			require.NoError(t, writer.Flush())
 			assert.Equal(t, v.want, buf.String())
 		})
