@@ -98,6 +98,8 @@ Use "sel [command] --help" for more information about a command.
 - one-indexed
 - index `0` refers to the entire line. (like `awk`)
 - slice notation
+- a range query writes only the columns the line has, so `1:10` on a 3-column line writes 3
+  and `10:12` writes nothing. Only a single index (`4`, `4:4`) reports an out-of-range column
 - an empty delimiter (`-d ''`, `-g -d ''`) splits a line into runes. (like `gawk`'s `FS=""`)
 - template output (`-t`, `--template`)
 - column exclusion (`-x`, `--exclude`)

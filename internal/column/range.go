@@ -21,23 +21,22 @@ func NewRangeSelector(start, step, stop int, isInfStop bool) RangeSelector {
 
 func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	columns := iter.ToArray()
-	m := len(columns)
+	n := len(columns)
+	start, stop := r.resolve(n)
+	step := r.step
 
-	if m == 0 {
-		// 空行。選べるカラムが1つもないので何も書かない。
-		// range クエリは行が短くても少ない数だけ書いてエラーにしない約束なので、その極端な場合として扱う
-		// (normalizeRange は stop を 0 に潰してしまい、start > stop = step の向き違いのエラーに化ける)
-		// ただし index 0 (行全体) を名指ししているときは、単項の 0 と同じく空文字列のカラム1個として書く
-		if r.includesWholeLine() {
-			return w.WriteLine(columns)
-		}
+	// 前向きの開いた範囲(2: など)で start が行末を越えているのは、向きの食い違いではなく選べるカラムなし。
+	// 後ろ向き(5::-1 など)は stop が行末なので start > stop が正しい向きで、ここで打ち切ってはいけない
+	if r.isInfStop && r.step > 0 && start > stop {
 		return nil
 	}
 
-	start, stop, step := r.normalizeRange(m)
-
 	if start == stop {
-		if start > m || start < 1 {
+		if start == 0 {
+			// index 0 (行全体) だけを指している。単項の 0 と同じ扱い
+			return w.WriteLine(columns)
+		}
+		if start > n || start < 1 {
 			return fmt.Errorf("index %d: %w", start, iterator.ErrIndexOutOfRange)
 		}
 		return w.Write(columns[start-1])
@@ -47,6 +46,11 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 		if step < 0 {
 			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 		}
+		// 書かれたままの 0 は行全体の指定なので、行内には詰めずそのまま残す
+		start, stop = clampForward(start, stop, step, n, r.start != 0)
+		if start > stop {
+			return nil
+		}
 		return r.selectForward(w, columns, start, stop, step)
 	}
 
@@ -54,34 +58,11 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	if step > 0 {
 		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop)
 	}
+	start, stop = clampBackward(start, stop, step, n, r.stop != 0)
+	if start < stop {
+		return nil
+	}
 	return r.selectBackward(w, columns, start, stop, step)
-}
-
-// normalizeRange は範囲パラメータを正規化する
-func (r RangeSelector) normalizeRange(m int) (start, stop, step int) {
-	start = r.start
-	if start < 0 {
-		start = m + start + 1
-	}
-
-	stop = r.stop
-	if r.isInfStop || stop >= m {
-		stop = m
-	}
-	if stop < 0 {
-		stop = m + stop + 1
-	}
-
-	// 行のカラム数より大きい負の指定(1カラムの行に対する -3 など)は解決しても負のままなので、
-	// index 0 (行全体) に丸める。丸めないと columns[i-1] が範囲外アクセスになる
-	if start < 0 {
-		start = 0
-	}
-	if stop < 0 {
-		stop = 0
-	}
-
-	return start, stop, r.step
 }
 
 // selectForward は start < stop の場合の選択処理
@@ -121,8 +102,9 @@ func (r RangeSelector) selectBackward(w *output.Writer, columns [][]byte, start,
 }
 
 // resolve は行のカラム数 n に対して start/stop を実際のカラム番号に解決する。
-// normalizeRange と違って stop を n にクランプしない。クランプすると、行より後ろを指す
-// 範囲指定(5列の行に対する 10:12 など)が start > stop になって「step の向きが違う」に化けてしまう
+// 行内へのクランプはここではしない。stop を n に詰めてしまうと、行より後ろを指す範囲指定
+// (3カラムの行に対する 10:12 など)が start > stop になって「step の向きが違う」エラーに化ける。
+// 詰めるのは範囲の向きが決まったあと (clampForward / clampBackward)
 func (r RangeSelector) resolve(n int) (start, stop int) {
 	start = r.start
 	if start < 0 {
@@ -141,6 +123,31 @@ func (r RangeSelector) resolve(n int) (start, stop int) {
 	return start, stop
 }
 
+// clampForward は前向きの反復範囲を行内([1, n])に詰める。詰めないと 2:100000000000 のような
+// 行より後ろまで伸びた指定が行ごとに巨大なループになり、step 次第では i が溢れて負に回り込み終わらなくなる。
+// 行の先頭より前を指す start は step の刻みを保ったまま最初の行内カラムまで進める。
+// 詰めた結果 start > stop になったら、その行で選べるカラムは1つもない
+func clampForward(start, stop, step, n int, clampStart bool) (int, int) {
+	if clampStart && start < 1 {
+		start = 1 + ((start-1)%step+step)%step
+	}
+	if stop > n {
+		stop = n
+	}
+	return start, stop
+}
+
+// clampBackward は後ろ向きの反復範囲を行内([1, n])に詰める。理由と詰め方は clampForward と同じ
+func clampBackward(start, stop, step, n int, clampStop bool) (int, int) {
+	if d := -step; start > n {
+		start = n - ((n-start)%d+d)%d
+	}
+	if clampStop && stop < 1 {
+		stop = 1
+	}
+	return start, stop
+}
+
 // markExcluded は -x でこの範囲が指すカラムに印をつける。
 // 範囲外の添字は黙って飛ばすが、step の向きが範囲と食い違っているのはクエリ自体の誤りなのでエラーにする
 // (Select と同じ扱い)
@@ -148,8 +155,8 @@ func (r RangeSelector) markExcluded(mark []bool) error {
 	n := len(mark)
 	start, stop := r.resolve(n)
 
-	// 開いた範囲(2: など)で start が行末を越えているのは、向きの食い違いではなく除外対象なし
-	if r.isInfStop && start > stop {
+	// Select と同じく、前向きの開いた範囲で start が行末を越えているのは除外対象なし
+	if r.isInfStop && r.step > 0 && start > stop {
 		return nil
 	}
 
@@ -159,19 +166,12 @@ func (r RangeSelector) markExcluded(mark []bool) error {
 		return nil
 	}
 
+	// index 0 は NewExclusion が弾いているので、ここでは常に行内へ詰めてよい
 	if start < stop {
 		if r.step < 0 {
 			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
 		}
-		// 反復範囲を行内([1, n])に詰める。詰めないと 2:100000000000 のような行より後ろまで
-		// 伸びた指定が行ごとに巨大なループになり、step 次第では i が溢れて負に回り込み終わらなくなる
-		if start < 1 {
-			// step の刻みを保ったまま、最初の行内カラムまで進める
-			start = 1 + ((start-1)%r.step+r.step)%r.step
-		}
-		if stop > n {
-			stop = n
-		}
+		start, stop = clampForward(start, stop, r.step, n, true)
 		for i := start; i <= stop; i += r.step {
 			markColumn(mark, i)
 		}
@@ -181,13 +181,7 @@ func (r RangeSelector) markExcluded(mark []bool) error {
 	if r.step > 0 {
 		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
 	}
-	// 前向きと同じ理由で反復範囲を行内に詰める
-	if d := -r.step; start > n {
-		start = n - ((n-start)%d+d)%d
-	}
-	if stop < 1 {
-		stop = 1
-	}
+	start, stop = clampBackward(start, stop, r.step, n, true)
 	for i := start; i >= stop; i += r.step {
 		markColumn(mark, i)
 	}

@@ -166,24 +166,35 @@ func BenchmarkRangeSelector_Select_Step(b *testing.B) {
 	}
 }
 
-func TestRangeSelector_Select_OverNegative(t *testing.T) {
-	// 行のカラム数より大きい負の指定は解決しても負のままなので index 0 (行全体) に丸める。
-	// 丸めないと columns[i-1] が範囲外アクセスになって panic する
+func TestRangeSelector_Select_OutOfRange(t *testing.T) {
+	// 行の外を指す添字は、step の刻みを保ったまま行内に詰める。
+	// 詰めないと columns[i-1] が範囲外アクセスになって panic したり、頼んでいない index 0 (行全体) が出たりする
 	dataset := []struct {
-		name string
-		rs   RangeSelector
+		name    string
+		rs      RangeSelector
+		columns []string
+		want    string
 	}{
-		{name: "-3:", rs: NewRangeSelector(-3, 1, -3, true)},
-		{name: "1:-5:-1", rs: NewRangeSelector(1, -1, -5, false)},
+		{name: "-3:", rs: NewRangeSelector(-3, 1, -3, true), columns: []string{"a"}, want: "a"},
+		{name: "1:-5:-1", rs: NewRangeSelector(1, -1, -5, false), columns: []string{"a"}, want: "a"},
+		{name: "-4:", rs: NewRangeSelector(-4, 1, -4, true), columns: []string{"a", "b"}, want: "a b"},
+		{name: "-8:-1:2", rs: NewRangeSelector(-8, 2, -1, false), columns: []string{"a", "b"}, want: "a"},
+		{name: "10:1:-1", rs: NewRangeSelector(10, -1, 1, false), columns: []string{"a", "b", "c"}, want: "c b a"},
+		{name: "5::-1", rs: NewRangeSelector(5, -1, 0, true), columns: []string{"a", "b", "c"}, want: "c"},
+		{name: "2:-8:-1", rs: NewRangeSelector(2, -1, -8, false), columns: []string{"a", "b", "c"}, want: "b a"},
+		{name: "10:12", rs: NewRangeSelector(10, 1, 12, false), columns: []string{"a", "b", "c"}, want: ""},
+		{name: "2:", rs: NewRangeSelector(2, 1, 2, true), columns: []string{"a"}, want: ""},
+		{name: "0:0", rs: NewRangeSelector(0, 1, 0, false), columns: []string{"a", "b", "c"}, want: "a b c"},
+		{name: "1:3 (空行)", rs: NewRangeSelector(1, 1, 3, false), columns: nil, want: ""},
 	}
 
 	for _, v := range dataset {
 		t.Run(v.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, &buf, true)
-			require.NoError(t, v.rs.Select(writer, &testColumns{a: []string{"a"}}))
+			require.NoError(t, v.rs.Select(writer, &testColumns{a: v.columns}))
 			require.NoError(t, writer.Flush())
-			assert.Equal(t, "a a", buf.String())
+			assert.Equal(t, v.want, buf.String())
 		})
 	}
 }

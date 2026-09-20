@@ -114,6 +114,21 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParse_RangeDirection(t *testing.T) {
+	// start と stop が両方とも負でなければ、範囲の向きは行に関係なく決まる。
+	// step の向きと食い違うクエリはどの行でも成立しないのでパース時に断る
+	for _, q := range []string{"5:1", "1:0", "2:0", "1:5:-1", "10:12:-1"} {
+		_, err := Parse([]string{q})
+		require.Error(t, err, "query: %q", q)
+	}
+
+	// 負の指定は行のカラム数で解決するまで向きが決まらないので、ここでは通す
+	for _, q := range []string{"-1:1:-1", "1:-5:-1", "-8:-1:2", "2:-8:-1", "5::-1", "2:2"} {
+		_, err := Parse([]string{q})
+		assert.NoError(t, err, "query: %q", q)
+	}
+}
+
 func TestParseExclude(t *testing.T) {
 	t.Run("index/rangeクエリを受け付ける", func(t *testing.T) {
 		e, err := ParseExclude([]string{"1", "-1", "2:4", "2:8:2", "3:"})
