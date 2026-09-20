@@ -939,6 +939,151 @@ func Test_E2E(t *testing.T) {
 			expectedStderr: []string{""},
 			expectedError:  nil,
 		},
+		// -x/--exclude。除外は選択より先に効き、残ったカラムは1から番号付けし直される
+		{
+			name: "sel -x 2 drops the 2nd column",
+			input: input{
+				args:  []string{"-x", "2"},
+				stdin: []string{"a b c d e", "1 2 3 4 5"},
+			},
+			expectedStdout: []string{"a c d e", "1 3 4 5"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 2,4 drops both columns",
+			input: input{
+				args:  []string{"-x", "2,4"},
+				stdin: []string{"a b c d e"},
+			},
+			expectedStdout: []string{"a c e"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 2 -x 4 drops both columns",
+			input: input{
+				args:  []string{"-x", "2", "-x", "4"},
+				stdin: []string{"a b c d e"},
+			},
+			expectedStdout: []string{"a c e"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 2:4 drops a range",
+			input: input{
+				args:  []string{"-x", "2:4"},
+				stdin: []string{"a b c d e"},
+			},
+			expectedStdout: []string{"a e"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 3: drops an open range",
+			input: input{
+				args:  []string{"-x", "3:"},
+				stdin: []string{"a b c d e", "1 2"},
+			},
+			expectedStdout: []string{"a b", "1 2"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel --exclude=-1 drops the last column",
+			input: input{
+				args:  []string{"--exclude=-1"},
+				stdin: []string{"a b c", "1 2 3 4"},
+			},
+			expectedStdout: []string{"a b", "1 2 3"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 2 1:3 renumbers the remaining columns",
+			input: input{
+				args:  []string{"-x", "2", "1:3"},
+				stdin: []string{"a b c d e"},
+			},
+			expectedStdout: []string{"a c d"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 2 0 prints the remaining columns as the whole line",
+			input: input{
+				args:  []string{"-x", "2", "0"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"a c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 9 is a no-op for shorter lines",
+			input: input{
+				args:  []string{"-x", "9"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"a b c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 1 keeps empty lines",
+			input: input{
+				args:  []string{"-x", "1"},
+				stdin: []string{"a b", "", "c d"},
+			},
+			expectedStdout: []string{"b", "", "d"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel --csv -x 2 drops the 2nd field",
+			input: input{
+				args:  []string{"--csv", "-D", ",", "-x", "2"},
+				stdin: []string{"a,b,c", `"x,y",b,c`},
+			},
+			expectedStdout: []string{"a,c", "x,y,c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 2 --template fills placeholders with the remaining columns",
+			input: input{
+				args:  []string{"-x", "2", "-t", "[{}|{}]", "1", "2"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"[a|c]"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x 0 exits with error",
+			input: input{
+				args:  []string{"-x", "0"},
+				stdin: []string{"a b c"},
+			},
+			expectExitError: true,
+		},
+		{
+			name: "sel -x with a switch query exits with error",
+			input: input{
+				args:  []string{"-x", "/a/:/b/"},
+				stdin: []string{"a b c"},
+			},
+			expectExitError: true,
+		},
+		{
+			name: "sel without queries and -x exits with error",
+			input: input{
+				args:  []string{},
+				stdin: []string{"a b c"},
+			},
+			expectExitError: true,
+		},
 	}
 
 	for _, testcase := range testcases {

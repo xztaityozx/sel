@@ -96,6 +96,21 @@ func TestRangeSelector_Select(t *testing.T) {
 		}
 	})
 
+	t.Run("空行はエラーにせず何も書かない", func(t *testing.T) {
+		for _, rs := range []RangeSelector{
+			NewRangeSelector(1, 1, 1, true),
+			NewRangeSelector(1, 1, 3, false),
+			NewRangeSelector(-1, -1, -3, false),
+		} {
+			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)
+			err := rs.Select(writer, &testColumns{})
+			assert.NoError(t, writer.Flush())
+			assert.NoError(t, err)
+			assert.Empty(t, w.String())
+			w.Reset()
+		}
+	})
+
 	t.Run("Inf", func(t *testing.T) {
 		rs := NewRangeSelector(1, 1, 1, true)
 		writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, w, true)

@@ -10,36 +10,41 @@ import (
 func Parse(args []string) ([]column.Selector, error) {
 	rt := make([]column.Selector, 0, len(args))
 	for _, v := range args {
-		query := Query(v)
-
-		if m := query.matchIndexQuery(); m != nil {
-			var sel column.Selector
-			var err error
-			if m[2] == "" {
-				sel, err = parseIndexQuery(query, m)
-			} else {
-				sel, err = parseRangeQuery(query, m)
-			}
-			if err != nil {
-				return nil, err
-			}
-			rt = append(rt, sel)
-			continue
+		sel, err := parseQuery(Query(v))
+		if err != nil {
+			return nil, err
 		}
-
-		if m := query.matchSwitchQuery(); m != nil {
-			sel, err := parseSwitchQuery(query, m)
-			if err != nil {
-				return nil, err
-			}
-			rt = append(rt, sel)
-			continue
-		}
-
-		return nil, fmt.Errorf("%s is invalid query", query)
+		rt = append(rt, sel)
 	}
 
 	return rt, nil
+}
+
+// ParseExclude は -x に渡されたクエリ列をパースして column.Exclusion を作る。
+// 除外に使えるのは index/range クエリだけで、switch クエリと index 0 は column.NewExclusion が弾く
+func ParseExclude(args []string) (*column.Exclusion, error) {
+	selectors, err := Parse(args)
+	if err != nil {
+		return nil, err
+	}
+
+	return column.NewExclusion(selectors, args)
+}
+
+// parseQuery はクエリ1つを Selector にする
+func parseQuery(query Query) (column.Selector, error) {
+	if m := query.matchIndexQuery(); m != nil {
+		if m[2] == "" {
+			return parseIndexQuery(query, m)
+		}
+		return parseRangeQuery(query, m)
+	}
+
+	if m := query.matchSwitchQuery(); m != nil {
+		return parseSwitchQuery(query, m)
+	}
+
+	return nil, fmt.Errorf("%s is invalid query", query)
 }
 
 // parseIndexQuery は "1" や "-3" のような単一 index クエリをパースする

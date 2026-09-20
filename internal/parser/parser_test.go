@@ -4,6 +4,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/xztaityozx/sel/internal/column"
 )
 
@@ -109,4 +112,31 @@ func TestParse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseExclude(t *testing.T) {
+	t.Run("index/rangeクエリを受け付ける", func(t *testing.T) {
+		e, err := ParseExclude([]string{"1", "-1", "2:4", "2:8:2", "3:"})
+		require.NoError(t, err)
+		assert.NotNil(t, e)
+	})
+
+	t.Run("switchクエリは受け付けない", func(t *testing.T) {
+		_, err := ParseExclude([]string{"/a/:/b/"})
+		assert.Error(t, err)
+	})
+
+	t.Run("index 0 は受け付けない", func(t *testing.T) {
+		for _, q := range []string{"0", ""} {
+			_, err := ParseExclude([]string{q})
+			assert.Error(t, err, "query: %q", q)
+		}
+	})
+
+	t.Run("不正なクエリ", func(t *testing.T) {
+		for _, q := range []string{"a", "1:2:0"} {
+			_, err := ParseExclude([]string{q})
+			assert.Error(t, err, "query: %q", q)
+		}
+	})
 }

@@ -23,6 +23,13 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	columns := iter.ToArray()
 	m := len(columns)
 
+	if m == 0 {
+		// 空行。選べるカラムが1つもないので何も書かない。
+		// range クエリは行が短くても少ない数だけ書いてエラーにしない約束なので、その極端な場合として扱う
+		// (normalizeRange は stop を 0 に潰してしまい、start > stop = step の向き違いのエラーに化ける)
+		return nil
+	}
+
 	start, stop, step := r.normalizeRange(m)
 
 	if start == stop {
@@ -98,4 +105,63 @@ func (r RangeSelector) selectBackward(w *output.Writer, columns [][]byte, start,
 		}
 	}
 	return nil
+}
+
+// resolve は行のカラム数 n に対して start/stop を実際のカラム番号に解決する。
+// normalizeRange と違って stop を n にクランプしない。クランプすると、行より後ろを指す
+// 範囲指定(5列の行に対する 10:12 など)が start > stop になって「step の向きが違う」に化けてしまう
+func (r RangeSelector) resolve(n int) (start, stop int) {
+	start = r.start
+	if start < 0 {
+		start = n + start + 1
+	}
+
+	if r.isInfStop {
+		return start, n
+	}
+
+	stop = r.stop
+	if stop < 0 {
+		stop = n + stop + 1
+	}
+
+	return start, stop
+}
+
+// markExcluded は -x でこの範囲が指すカラムに印をつける。
+// 範囲外の添字は黙って飛ばすが、step の向きが範囲と食い違っているのはクエリ自体の誤りなのでエラーにする
+// (Select と同じ扱い)
+func (r RangeSelector) markExcluded(mark []bool) error {
+	n := len(mark)
+	start, stop := r.resolve(n)
+
+	// 開いた範囲(2: など)で start が行末を越えているのは、向きの食い違いではなく除外対象なし
+	if r.isInfStop && start > stop {
+		return nil
+	}
+
+	if start <= stop {
+		if r.step < 0 {
+			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
+		}
+		for i := start; i <= stop; i += r.step {
+			markColumn(mark, i)
+		}
+		return nil
+	}
+
+	if r.step > 0 {
+		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
+	}
+	for i := start; i >= stop; i += r.step {
+		markColumn(mark, i)
+	}
+	return nil
+}
+
+// markColumn は行のカラム数に収まっている i だけに印をつける
+func markColumn(mark []bool, i int) {
+	if i >= 1 && i <= len(mark) {
+		mark[i-1] = true
+	}
 }

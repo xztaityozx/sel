@@ -36,3 +36,17 @@ func (i IndexSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	}
 	return w.Write(item)
 }
+
+// markExcluded は -x でこの index が指すカラムに印をつける。
+// 範囲外の index は -M/-E とは関係なく黙って無視する(除外したいカラムがそもそも無いだけなので)
+func (i IndexSelector) markExcluded(mark []bool) error {
+	idx := i.index
+	if idx < 0 {
+		idx = len(mark) + idx + 1
+	}
+
+	if idx >= 1 && idx <= len(mark) {
+		mark[idx-1] = true
+	}
+	return nil
+}
