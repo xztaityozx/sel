@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # head の median が base の median のこの倍率を超えたら失敗させる。
-      # GitHub のランナーは実行ごとのブレが大きいので、あまり小さくすると誤検知する
-      THRESHOLD: "1.20"
+      # 同一コードでの実測ではケースあたりのブレは 1〜3% なので、10% あれば誤検知しない
+      THRESHOLD: "1.10"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

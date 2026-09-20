@@ -3,7 +3,7 @@
 # head の median が base の median の $THRESHOLD 倍を超えたら失敗する
 set -euo pipefail
 
-THRESHOLD="${THRESHOLD:-1.20}"
+THRESHOLD="${THRESHOLD:-1.10}"
 BASE_BIN="${BASE_BIN:-/tmp/sel-base}"
 HEAD_BIN="${HEAD_BIN:-/tmp/sel-head}"
 DATA="${DATA:-/tmp/data.txt}"
