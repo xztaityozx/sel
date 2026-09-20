@@ -1107,6 +1107,17 @@ func Test_E2E(t *testing.T) {
 			expectedError:  nil,
 		},
 		{
+			// 負の終端が行に届かない範囲は、その行では空。除外するカラムがないだけでエラーではない
+			name: "sel -x 2:-1 is a no-op for shorter lines",
+			input: input{
+				args:  []string{"-x", "2:-1"},
+				stdin: []string{"a b c", "a", "", "d e"},
+			},
+			expectedStdout: []string{"a", "a", "", "d"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
 			name: "sel without queries and -x exits with error",
 			input: input{
 				args:  []string{},

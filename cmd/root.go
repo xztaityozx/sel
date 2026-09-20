@@ -243,14 +243,7 @@ func run(input *os.File, source string, opt option.Option, w *output.Writer, sel
 
 		if exclusion != nil {
 			// 除外を先に適用する。残ったカラムは1から番号付けし直されて selector に渡る
-			columns, err = exclusion.Apply(columns)
-			if err != nil {
-				query := ""
-				if xerr, ok := errors.AsType[*column.ExcludeError](err); ok {
-					query, err = xerr.Query, xerr.Err
-				}
-				return &positionError{source: source, line: line, query: query, err: err}
-			}
+			columns = exclusion.Apply(columns)
 		}
 
 		if serr := selectAll(columns, w, selectors, queries, filler); serr != nil {

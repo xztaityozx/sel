@@ -1,7 +1,6 @@
 package column
 
 import (
-	"errors"
 	"math"
 	"strings"
 	"testing"
@@ -13,22 +12,17 @@ import (
 )
 
 // apply は cols に対して -x 相当の除外をかけ、残ったカラムを文字列で返す
-func apply(t *testing.T, cols []string, selectors ...Selector) ([]string, error) {
+func apply(t *testing.T, cols []string, selectors ...Selector) []string {
 	t.Helper()
 
 	e, err := NewExclusion(selectors, nil)
 	require.NoError(t, err)
 
-	columns, err := e.Apply(&testColumns{a: cols})
-	if err != nil {
-		return nil, err
-	}
-
 	var rt []string
-	for _, v := range columns.ToArray() {
+	for _, v := range e.Apply(&testColumns{a: cols}).ToArray() {
 		rt = append(rt, string(v))
 	}
-	return rt, nil
+	return rt
 }
 
 func TestExclusion_Apply(t *testing.T) {
@@ -63,32 +57,36 @@ func TestExclusion_Apply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := apply(t, cols, tt.selectors...)
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, apply(t, cols, tt.selectors...))
 		})
 	}
 
 	t.Run("空行", func(t *testing.T) {
-		got, err := apply(t, nil, NewIndexSelector(1), NewRangeSelector(2, 1, 3, false), NewRangeSelector(2, 1, 2, true))
-		require.NoError(t, err)
-		assert.Empty(t, got)
+		assert.Empty(t, apply(t, nil, NewIndexSelector(1), NewRangeSelector(2, 1, 3, false), NewRangeSelector(2, 1, 2, true)))
 	})
 
-	t.Run("stepの向きが違うとエラー", func(t *testing.T) {
-		_, err := apply(t, cols, NewRangeSelector(1, -1, 5, false))
-		require.Error(t, err)
-
-		_, err = apply(t, cols, NewRangeSelector(5, 1, 1, false))
-		require.Error(t, err)
+	// 負の終端が start より手前に落ちた範囲は、その行では空。除外するカラムがないだけでエラーではない
+	t.Run("負の終端が行に届かないと何も除外しない", func(t *testing.T) {
+		for _, tt := range []struct {
+			name string
+			cols []string
+			sel  RangeSelector
+		}{
+			{name: "2:-1 が1カラムの行", cols: []string{"a"}, sel: NewRangeSelector(2, 1, -1, false)},
+			{name: "1:-5 が3カラムの行", cols: []string{"a", "b", "c"}, sel: NewRangeSelector(1, 1, -5, false)},
+			{name: "-1:5:-1 が2カラムの行", cols: []string{"a", "b"}, sel: NewRangeSelector(-1, -1, 5, false)},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				assert.Equal(t, tt.cols, apply(t, tt.cols, tt.sel))
+			})
+		}
 	})
 
 	t.Run("除外後のカラムは1から番号付けし直される", func(t *testing.T) {
 		e, err := NewExclusion([]Selector{NewIndexSelector(2)}, nil)
 		require.NoError(t, err)
 
-		columns, err := e.Apply(&testColumns{a: cols})
-		require.NoError(t, err)
+		columns := e.Apply(&testColumns{a: cols})
 
 		first, err := columns.ElementAt(1)
 		require.NoError(t, err)
@@ -111,8 +109,7 @@ func TestExclusion_Apply(t *testing.T) {
 		require.NoError(t, err)
 
 		for _, line := range [][]string{{"a", "b", "c"}, {"d"}, nil, {"e", "f"}} {
-			columns, err := e.Apply(&testColumns{a: line})
-			require.NoError(t, err)
+			columns := e.Apply(&testColumns{a: line})
 
 			var got []string
 			for _, v := range columns.ToArray() {
@@ -157,17 +154,5 @@ func TestNewExclusion(t *testing.T) {
 			require.Error(t, err, tt.query)
 			assert.Contains(t, err.Error(), tt.query)
 		}
-	})
-
-	t.Run("実行時のエラーにもクエリが載る", func(t *testing.T) {
-		e, err := NewExclusion([]Selector{NewIndexSelector(1), NewRangeSelector(5, 1, 1, false)}, []string{"1", "5:1"})
-		require.NoError(t, err)
-
-		_, err = e.Apply(&testColumns{a: []string{"a", "b", "c"}})
-		require.Error(t, err)
-
-		xerr, ok := errors.AsType[*ExcludeError](err)
-		require.True(t, ok)
-		assert.Equal(t, "5:1", xerr.Query)
 	})
 }

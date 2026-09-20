@@ -10,24 +10,13 @@ import (
 // mark は行のカラム数ぶんの長さで、除外するカラム(1-indexed の i)について mark[i-1] を立てる。
 // 存在しないカラムを指す指定は何もしない(除外すべき列がないだけでエラーではない)
 type excluder interface {
-	markExcluded(mark []bool) error
+	markExcluded(mark []bool)
 }
-
-// ExcludeError は -x のどのクエリが失敗したかを保持する
-type ExcludeError struct {
-	Query string
-	Err   error
-}
-
-func (e *ExcludeError) Error() string { return e.Err.Error() }
-func (e *ExcludeError) Unwrap() error { return e.Err }
 
 // Exclusion は -x で指定されたカラムを取り除いた Columns を作るやつ。
 // 除外は選択より先に行われ、残ったカラムは1から番号付けし直される
 type Exclusion struct {
 	excluders []excluder
-	// excluders と同じ順番のクエリ文字列。エラーメッセージに使う
-	queries []string
 	// 行ごとに使い回すバッファ。backing array を手放さない理由は iterator.Iterator.Reset と同じ
 	mark []bool
 	kept [][]byte
@@ -39,7 +28,6 @@ type Exclusion struct {
 func NewExclusion(selectors []Selector, queries []string) (*Exclusion, error) {
 	e := &Exclusion{
 		excluders: make([]excluder, 0, len(selectors)),
-		queries:   make([]string, 0, len(selectors)),
 		view:      iterator.NewArrayColumns(),
 	}
 
@@ -66,7 +54,6 @@ func NewExclusion(selectors []Selector, queries []string) (*Exclusion, error) {
 			return nil, fmt.Errorf("query %q: only index and range queries can be excluded", query)
 		}
 		e.excluders = append(e.excluders, x)
-		e.queries = append(e.queries, query)
 	}
 
 	return e, nil
@@ -75,7 +62,7 @@ func NewExclusion(selectors []Selector, queries []string) (*Exclusion, error) {
 // Apply は除外後のカラムだけを見せる Columns を返す。
 // 返される Columns とそこから取り出した []byte は、次に Apply を呼ぶまでのあいだだけ有効
 // (iterator.Source が定めている寿命と同じ)
-func (e *Exclusion) Apply(columns iterator.Columns) (iterator.Columns, error) {
+func (e *Exclusion) Apply(columns iterator.Columns) iterator.Columns {
 	a := columns.ToArray()
 
 	if cap(e.mark) < len(a) {
@@ -85,10 +72,8 @@ func (e *Exclusion) Apply(columns iterator.Columns) (iterator.Columns, error) {
 		clear(e.mark)
 	}
 
-	for i, x := range e.excluders {
-		if err := x.markExcluded(e.mark); err != nil {
-			return nil, &ExcludeError{Query: e.queries[i], Err: err}
-		}
+	for _, x := range e.excluders {
+		x.markExcluded(e.mark)
 	}
 
 	e.kept = e.kept[:0]
@@ -99,5 +84,5 @@ func (e *Exclusion) Apply(columns iterator.Columns) (iterator.Columns, error) {
 	}
 
 	e.view.ResetFromArray(e.kept)
-	return e.view, nil
+	return e.view
 }

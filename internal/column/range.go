@@ -152,43 +152,43 @@ func clampBackward(start, stop, step, n int, clampStop bool) (int, int) {
 }
 
 // markExcluded は -x でこの範囲が指すカラムに印をつける。
-// 範囲外の添字は黙って飛ばすが、step の向きが範囲と食い違っているのはクエリ自体の誤りなのでエラーにする
-// (Select と同じ扱い)
-func (r RangeSelector) markExcluded(mark []bool) error {
+// 行の外に出た添字は黙って飛ばす。解決後の範囲と step の向きが食い違うのは、負の終端が
+// start より手前に落ちた場合だけ、つまりその行で選べるカラムが1つもないということなので、
+// これも何もしない。行のカラム数に関係なく向きが矛盾しているクエリは parser が弾いている
+func (r RangeSelector) markExcluded(mark []bool) {
 	n := len(mark)
 	start, stop := r.resolve(n)
 
-	// Select と同じく、開いた範囲で start が行の外側にあるのは除外対象なし
+	// 開いた範囲で start が行の外側にあるのも、除外するカラムなし
 	if r.isInfStop && ((r.step > 0 && start > stop) || (r.step < 0 && start < stop)) {
-		return nil
+		return
 	}
 
 	// Select と同じく、1カラムだけを指す範囲は step の向きを問わない
 	if start == stop {
 		markColumn(mark, start)
-		return nil
+		return
 	}
 
 	// index 0 は NewExclusion が弾いているので、ここでは常に行内へ詰めてよい
 	if start < stop {
 		if r.step < 0 {
-			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
+			return
 		}
 		start, stop = clampForward(start, stop, r.step, n, true)
 		for i := start; i <= stop; i += r.step {
 			markColumn(mark, i)
 		}
-		return nil
+		return
 	}
 
 	if r.step > 0 {
-		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, r.step, stop)
+		return
 	}
 	start, stop = clampBackward(start, stop, r.step, n, true)
 	for i := start; i >= stop; i += r.step {
 		markColumn(mark, i)
 	}
-	return nil
 }
 
 // includesWholeLine はクエリが index 0 (行全体) を名指ししているかどうかを返す。
