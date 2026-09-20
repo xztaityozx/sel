@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/xztaityozx/sel/internal/option"
 )
 
@@ -67,7 +69,7 @@ func TestNewSource(t *testing.T) {
 				return
 			}
 
-			as.NoError(err)
+			require.NoError(t, err)
 			if tt.wantCsv {
 				src, ok := got.(*csvSource)
 				as.True(ok)
@@ -131,7 +133,7 @@ func TestLineSource_Next(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			src, err := NewSource(option.Option{DelimiterOption: option.DelimiterOption{InputDelimiter: " "}}, strings.NewReader(tt.input))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, readAll(t, src))
 		})
 	}
@@ -145,28 +147,28 @@ func TestLineSource_Next_ReturnsReadError(t *testing.T) {
 	}
 
 	columns, err := src.Next()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []string{"a", "b"}, ss(columns.ToArray()))
 
 	// 行を返しきったあとにエラーが返り、それ以降は何度呼んでも同じエラーになる
 	_, err = src.Next()
-	assert.ErrorIs(t, err, wantErr)
+	require.ErrorIs(t, err, wantErr)
 	_, err = src.Next()
 	assert.ErrorIs(t, err, wantErr)
 }
 
 func TestCsvSource_Next(t *testing.T) {
 	src, err := NewSource(option.Option{Xsv: option.Xsv{Csv: true}}, strings.NewReader("a,\"b,c\"\nd,e\n"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, [][]string{{"a", "b,c"}, {"d", "e"}}, readAll(t, src))
 }
 
 func TestCsvSource_Next_ReturnsReadError(t *testing.T) {
 	src, err := NewSource(option.Option{Xsv: option.Xsv{Csv: true}}, strings.NewReader("a,\"b\nd,e\n"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = src.Next()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.NotErrorIs(t, err, io.EOF)
 }
 

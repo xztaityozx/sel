@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"unicode/utf8"
 )
 
@@ -240,8 +241,8 @@ func (i *Iterator) ToArray() [][]byte {
 	}
 
 	// back を逆順で追加
-	for j := len(i.back) - 1; j >= 0; j-- {
-		a = append(a, i.back[j])
+	for _, v := range slices.Backward(i.back) {
+		a = append(a, v)
 	}
 
 	i.a = a
@@ -341,8 +342,8 @@ func (r *RegexpIterator) ElementAt(idx int) ([]byte, error) {
 		}
 
 		// res を逆順で back に追加（back[0] = 最後の要素）
-		for i := len(res) - 1; i >= 0; i-- {
-			r.back = append(r.back, res[i])
+		for _, re := range slices.Backward(res) {
+			r.back = append(r.back, re)
 		}
 	}
 
@@ -434,8 +435,8 @@ func (r *RegexpIterator) ToArray() [][]byte {
 	// front + back(逆順) を結合
 	a := make([][]byte, 0, len(r.front)+len(r.back))
 	a = append(a, r.front...)
-	for j := len(r.back) - 1; j >= 0; j-- {
-		a = append(a, r.back[j])
+	for _, v := range slices.Backward(r.back) {
+		a = append(a, v)
 	}
 
 	r.a = a

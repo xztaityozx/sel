@@ -2,8 +2,9 @@ package parser
 
 import (
 	"fmt"
-	"github.com/xztaityozx/sel/internal/column"
 	"strconv"
+
+	"github.com/xztaityozx/sel/internal/column"
 )
 
 func Parse(args []string) ([]column.Selector, error) {

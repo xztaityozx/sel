@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func runSel(sel string, args, stdin []string) (stdout, stderr []string, err error) {
@@ -943,12 +944,13 @@ func Test_E2E(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			stdout, stderr, err := runSel(selPath, testcase.input.args, testcase.input.stdin)
-			if testcase.expectExitError {
-				as.Error(err, "エラーで終了するべき")
-			} else if testcase.expectedError != nil {
-				as.Equal(err, testcase.expectedError, "エラー内容が一致するべき")
-			} else {
-				as.NoError(err, "エラーなしで終了するべき")
+			switch {
+			case testcase.expectExitError:
+				require.Error(t, err, "エラーで終了するべき")
+			case testcase.expectedError != nil:
+				as.Equal(testcase.expectedError, err, "エラー内容が一致するべき")
+			default:
+				require.NoError(t, err, "エラーなしで終了するべき")
 				as.Equal(testcase.expectedStdout, stdout, "標準出力が一致するべき")
 				as.Equal(testcase.expectedStderr, stderr, "標準エラー出力が一致するべき")
 			}

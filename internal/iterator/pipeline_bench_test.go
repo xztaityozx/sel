@@ -25,6 +25,8 @@ func BenchmarkPipelineWide(b *testing.B) {
 
 // benchmarkPipeline は numColumns カラムの行を並べた入力を流して idx 番目のカラムを取り出す
 func benchmarkPipeline(b *testing.B, numColumns, idx int) {
+	b.Helper()
+
 	// 1カラムは "col%d_%07d" + 区切りで十数バイト。行数をカラム数に反比例させて
 	// 入力全体のバイト数を揃える。カラム数だけ増やすと数百MBの入力を積むことになる
 	const cells = 2000000
@@ -32,8 +34,8 @@ func benchmarkPipeline(b *testing.B, numColumns, idx int) {
 
 	var data bytes.Buffer
 	data.Grow(cells * 14)
-	for i := 0; i < lines; i++ {
-		for c := 0; c < numColumns; c++ {
+	for i := range lines {
+		for c := range numColumns {
 			if c > 0 {
 				data.WriteByte(' ')
 			}
@@ -53,7 +55,7 @@ func benchmarkPipeline(b *testing.B, numColumns, idx int) {
 	b.SetBytes(int64(data.Len()))
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		src, err := NewSource(opt, bytes.NewReader(data.Bytes()))
 		if err != nil {
 			b.Fatal(err)

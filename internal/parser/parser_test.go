@@ -1,9 +1,10 @@
 package parser
 
 import (
-	"github.com/xztaityozx/sel/internal/column"
 	"reflect"
 	"testing"
+
+	"github.com/xztaityozx/sel/internal/column"
 )
 
 func newSwitchSelector(begin, end string) column.SwitchSelector {

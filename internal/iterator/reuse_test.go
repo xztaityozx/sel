@@ -16,7 +16,7 @@ const shrinkThresholdWas = 64
 
 func wideLine() []byte {
 	var b bytes.Buffer
-	for i := 0; i < wideColumns; i++ {
+	for i := range wideColumns {
 		if i > 0 {
 			b.WriteByte(' ')
 		}

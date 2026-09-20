@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/xztaityozx/sel/internal/option"
 )
 
@@ -64,7 +66,7 @@ func TestWriter_Write(t *testing.T) {
 
 			// Write だけでは行が未完成なので、まだ buf には何も渡っていないはず
 			_ = w.buf.Flush()
-			assert.Equal(t, "", buf.String())
+			assert.Empty(t, buf.String())
 
 			// WriteNewLine で行が完成して、はじめて buf に渡る
 			_ = w.WriteNewLine()
@@ -119,7 +121,7 @@ func TestWriter_Template(t *testing.T) {
 			w := newTemplateWriter(buf, tt.template)
 
 			for _, c := range tt.columns {
-				assert.NoError(t, w.Write([]byte(c)))
+				require.NoError(t, w.Write([]byte(c)))
 			}
 			assert.NoError(t, w.WriteNewLine())
 			assert.NoError(t, w.Flush())
@@ -139,10 +141,10 @@ func TestWriter_Template_NotEnoughColumns(t *testing.T) {
 	assert.NoError(t, w.Write([]byte("b")))
 
 	err := w.WriteNewLine()
-	assert.EqualError(t, err, "template expects 3 columns but query produced 2")
+	require.EqualError(t, err, "template expects 3 columns but query produced 2")
 
-	assert.NoError(t, w.Flush())
-	assert.Equal(t, "", buf.String())
+	require.NoError(t, w.Flush())
+	assert.Empty(t, buf.String())
 }
 
 // TestWriter_WriteMissing は範囲外カラムの埋め方が、テンプレートの有無で
@@ -241,7 +243,7 @@ func TestWriter_FillRemaining(t *testing.T) {
 			w := newTemplateWriter(buf, "[{}|{}]")
 
 			for _, c := range tt.written {
-				assert.NoError(t, w.Write([]byte(c)))
+				require.NoError(t, w.Write([]byte(c)))
 			}
 			assert.NoError(t, w.FillRemaining([]byte(tt.fill)))
 			assert.NoError(t, w.WriteNewLine())
@@ -273,11 +275,11 @@ func TestWriter_Template_MultipleLines(t *testing.T) {
 
 	for _, cols := range [][]string{{"a", "b"}, {"c", "d"}} {
 		for _, c := range cols {
-			assert.NoError(t, w.Write([]byte(c)))
+			require.NoError(t, w.Write([]byte(c)))
 		}
-		assert.NoError(t, w.WriteNewLine())
+		require.NoError(t, w.WriteNewLine())
 	}
-	assert.NoError(t, w.Flush())
+	require.NoError(t, w.Flush())
 
 	assert.Equal(t, "[a:b]\n[c:d]\n", buf.String())
 }
@@ -286,7 +288,7 @@ func BenchmarkWriter_Write(b *testing.B) {
 	w := NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, io.Discard, false)
 	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e")}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = w.Write(cols...)
 		_ = w.WriteNewLine()
 	}
@@ -297,7 +299,7 @@ func BenchmarkWriter_WriteNewLine_Template(b *testing.B) {
 
 	cols := [][]byte{[]byte("a"), []byte("b"), []byte("c"), []byte("d"), []byte("e")}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = w.Write(cols...)
 		_ = w.WriteNewLine()
 	}

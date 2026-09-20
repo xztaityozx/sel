@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/xztaityozx/sel/internal/option"
 )
 
@@ -11,7 +12,7 @@ import (
 // リテラルとプレースホルダの対応が期待通りかを、出力の形で確かめるためのヘルパ
 func render(t *option.Template, columns []string) []byte {
 	var b []byte
-	for i := 0; i < t.Placeholders(); i++ {
+	for i := range t.Placeholders() {
 		var column []byte
 		if i < len(columns) {
 			column = []byte(columns[i])

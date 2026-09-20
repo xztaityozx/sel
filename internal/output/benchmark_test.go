@@ -16,7 +16,7 @@ func BenchmarkWriter_Write_Single(b *testing.B) {
 	buf := &bytes.Buffer{}
 	w := NewWriter(opt, buf, false)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		buf.Reset()
 		_ = w.Write([]byte("column"))
 		_ = w.WriteNewLine()
@@ -33,7 +33,7 @@ func BenchmarkWriter_Write_Multiple(b *testing.B) {
 	w := NewWriter(opt, buf, false)
 	columns := bytes.Split(bytes.Repeat([]byte("column "), 100), []byte(" "))
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		buf.Reset()
 		_ = w.Write(columns...)
 		_ = w.WriteNewLine()
@@ -49,7 +49,7 @@ func BenchmarkWriter_Write_WithFlush(b *testing.B) {
 	buf := &bytes.Buffer{}
 	w := NewWriter(opt, buf, true)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		buf.Reset()
 		_ = w.Write([]byte("column"))
 		_ = w.WriteNewLine()
