@@ -62,7 +62,7 @@ func normalizeArgs(cmd *cobra.Command, args []string) []string {
 // shorthandsTakeNextArg は -rd のような shorthand の束が、次のトークンを値として消費するかを返す。
 // 値を取るフラグが束の末尾にあるときだけ消費する（-d, や -rd, のように値が結合されていれば消費しない）
 func shorthandsTakeNextArg(fs *pflag.FlagSet, shorthands string) bool {
-	for i := 0; i < len(shorthands); i++ {
+	for i := range len(shorthands) {
 		flag := fs.ShorthandLookup(shorthands[i : i+1])
 		if flag == nil {
 			// 未知の shorthand（と、cobra が Execute 時に足す -h / -v）は値を取らないものとみなす。
