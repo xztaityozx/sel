@@ -73,3 +73,6 @@ golangci-lint run
 - `-S`: Pre-split before selection
 - `--csv`/`--tsv`: CSV/TSV parsing mode
 - `-t`: Template output with `{}` placeholders (`{{`/`}}` escape a literal brace)
+
+## Git
+- Do not include a `Claude-Session:` line (or any claude.ai session URL) in commit messages or pull request bodies
