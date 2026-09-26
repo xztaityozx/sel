@@ -64,6 +64,8 @@ golangci-lint run
 - **CSV/TSV mode**: Uses `encoding/csv` for proper quote handling
 
 ### Command Flags (defined in `cmd/root.go`)
+`Execute()` runs `os.Args` through `normalizeArgs` (`cmd/args.go`) first, which reorders it into `flags... -- queries...`: a token whose `-` is followed by a digit is always a query (no shorthand is a digit), so negative indices need no `--`. `--` itself is dropped and sorting continues past it
+
 - `-d`/`-D`: Input/output delimiters
 - `-g`: Use regexp for input delimiter
 - `-a`: Shorthand for `-gd '\s+'`

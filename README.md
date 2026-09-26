@@ -60,7 +60,7 @@ Examples:
 
 	$ cat /path/to/file | sel 1
 	$ sel 1:10 -f ./file
-	$ cat /path/to/file.csv | sel -d, 1 2 3 4 -- -1 -2 -3 -4
+	$ cat /path/to/file.csv | sel -d, 1 2 3 4 -1 -2 -3 -4
 	$ cat /path/to/file.csv | sel --csv 1 2 3 4
 	$ sel 2:: -f ./file
 	$ cat /path/to/file | sel /^begin/:/^end/

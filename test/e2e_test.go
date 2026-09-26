@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -939,6 +940,64 @@ func Test_E2E(t *testing.T) {
 			expectedStderr: []string{""},
 			expectedError:  nil,
 		},
+		{
+			name: "sel -2:-1 works without --",
+			input: input{
+				args:  []string{"-2:-1"},
+				stdin: []string{"a b c d"},
+			},
+			expectedStdout: []string{"c d"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d, 1 -1 mixes a joined flag and a negative index",
+			input: input{
+				args:  []string{"-d,", "1", "-1"},
+				stdin: []string{"a,b,c"},
+			},
+			expectedStdout: []string{"a c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -1 -D : 1 accepts flags after a negative index",
+			input: input{
+				args:  []string{"-1", "-D", ":", "1"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"c:a"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -d -1 -1 takes the first -1 as the delimiter",
+			input: input{
+				args:  []string{"-d", "-1", "-1"},
+				stdin: []string{"a-1b-1c"},
+			},
+			expectedStdout: []string{"c"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -- -1 -D : 1 accepts flags after --",
+			input: input{
+				args:  []string{"--", "-1", "-D", ":", "1"},
+				stdin: []string{"a b c"},
+			},
+			expectedStdout: []string{"c:a"},
+			expectedStderr: []string{""},
+			expectedError:  nil,
+		},
+		{
+			name: "sel -x -1 still rejects an unknown flag",
+			input: input{
+				args:  []string{"-x", "-1"},
+				stdin: []string{"a b c"},
+			},
+			expectExitError: true,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -954,6 +1013,26 @@ func Test_E2E(t *testing.T) {
 				as.Equal(testcase.expectedStdout, stdout, "標準出力が一致するべき")
 				as.Equal(testcase.expectedStderr, stderr, "標準エラー出力が一致するべき")
 			}
+		})
+	}
+}
+
+func Test_E2E_NegativeIndexWithFileFlag(t *testing.T) {
+	selPath := filepath.Join(ProjectRoot(), "dist", "sel")
+	file := filepath.Join(t.TempDir(), "input.txt")
+	require.NoError(t, os.WriteFile(file, []byte("a b c\n"), 0o600))
+
+	for _, args := range [][]string{
+		{"-1", "-f", file},
+		{"--", "-1", "-f", file},
+		{"-f", file, "-1"},
+		{"--input-files", file, "-1"},
+		{"--input-files=" + file, "-1"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			stdout, _, err := runSel(selPath, args, nil)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"c"}, stdout)
 		})
 	}
 }
