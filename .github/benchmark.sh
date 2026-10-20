@@ -38,8 +38,8 @@ while IFS=$'\t' read -r name args; do
 		-n head "$HEAD_BIN $args"
 
 	read -r base head ratio < <(jq -r '
-		(.results[] | select(.command == "base") | .median) as $b
-		| (.results[] | select(.command == "head") | .median) as $h
+		(.results[] | select(.name == "base") | .summary.time_wall_clock.median) as $b
+		| (.results[] | select(.name == "head") | .summary.time_wall_clock.median) as $h
 		| [$b * 1000, $h * 1000, $h / $b] | @tsv' /tmp/result.json)
 
 	mark=""
