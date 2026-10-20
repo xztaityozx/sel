@@ -1,3 +1,4 @@
 [tools]
 golangci-lint = "2.13.2"
-hyperfine = "latest"
+# JSON の形式がメジャーバージョンで変わるので固定する (.github/benchmark.sh が読んでいる)
+hyperfine = "2.0.0"
