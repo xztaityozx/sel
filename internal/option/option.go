@@ -19,6 +19,8 @@ type Option struct {
 	Xsv
 	// --template
 	Template *Template
+	// -x, --exclude option
+	Exclude []string
 }
 
 // DelimiterOption is setting for --input/output-delimiter option
@@ -93,6 +95,7 @@ const (
 	NameIgnoreMissing   = "ignore-missing"
 	NameFillMissing     = "fill-missing"
 	NameTemplate        = "template"
+	NameExclude         = "exclude"
 
 	DefaultFillMissing = ""
 	DefaultTemplate    = ""
@@ -112,6 +115,7 @@ func GetOptionNames() []string {
 		NameCsv,
 		NameTsv,
 		NameTemplate,
+		NameExclude,
 	}
 }
 
@@ -169,5 +173,6 @@ func NewOption(v *viper.Viper) (Option, error) {
 			Tsv: v.GetBool(NameTsv),
 		},
 		Template: tmpl,
+		Exclude:  v.GetStringSlice(NameExclude),
 	}, nil
 }

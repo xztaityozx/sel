@@ -51,7 +51,9 @@ golangci-lint run
      - `RegexpIterator` - Regex-based splitting
      - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
 
-4. **Output** (`internal/output/`) - `Writer` handles delimiter joining and template-based output
+4. **Exclusion** (`internal/column/exclude.go`) - Only when `-x` is given. `Exclusion.Apply` wraps the `Columns` of a line in a view that hides the excluded columns, so selectors see the remaining columns renumbered from 1. Index and range queries only (they implement `markExcluded`); switch queries and index `0` are rejected at parse time
+
+5. **Output** (`internal/output/`) - `Writer` handles delimiter joining and template-based output
    - `option.Template` (`internal/option/template.go`) parses `-t` into literal fragments. It is NOT `text/template`: `{}` is a placeholder, `{{`/`}}` are literal braces, everything else is copied as-is
 
 ### Key Design Decisions
@@ -71,3 +73,4 @@ golangci-lint run
 - `-S`: Pre-split before selection
 - `--csv`/`--tsv`: CSV/TSV parsing mode
 - `-t`: Template output with `{}` placeholders (`{{`/`}}` escape a literal brace)
+- `-x`/`--exclude`: Drop columns (index or range query) before the queries run; the remaining columns are renumbered from 1, and with no query at all every remaining column is printed
