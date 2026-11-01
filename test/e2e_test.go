@@ -1198,6 +1198,11 @@ func Test_E2E(t *testing.T) {
 			expectedStdout: []string{"[X]"},
 			expectedStderr: []string{""},
 		},
+		{
+			name:            "sel -x 1, rejects the empty query",
+			input:           input{args: []string{"-x", "1,", "1"}, stdin: []string{"a b"}},
+			expectExitError: true,
+		},
 	}
 
 	for _, testcase := range testcases {

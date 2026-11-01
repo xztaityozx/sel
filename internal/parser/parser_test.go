@@ -142,7 +142,7 @@ func TestParseExclude(t *testing.T) {
 	})
 
 	t.Run("index 0 は受け付けない", func(t *testing.T) {
-		for _, q := range []string{"0", ""} {
+		for _, q := range []string{"0", "", "0:2"} {
 			_, err := ParseExclude([]string{q})
 			assert.Error(t, err, "query: %q", q)
 		}

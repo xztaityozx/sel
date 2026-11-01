@@ -2,7 +2,9 @@ package parser
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/xztaityozx/sel/internal/column"
 )
@@ -23,6 +25,11 @@ func Parse(args []string) ([]column.Selector, error) {
 // ParseExclude は -x に渡されたクエリ列をパースして column.Exclusion を作る。
 // 除外に使えるのは index/range クエリだけで、switch クエリと index 0 は column.NewExclusion が弾く
 func ParseExclude(args []string) (*column.Exclusion, error) {
+	// -x 1, の末尾カンマなどで空の要素ができると index 0 として読まれてしまうので、ここで断る。
+	// args はカンマで分割済みなので、入力に近い形に戻してメッセージに出す
+	if slices.Contains(args, "") {
+		return nil, fmt.Errorf("invalid -x value %q: empty item between commas", strings.Join(args, ","))
+	}
 	selectors, err := Parse(args)
 	if err != nil {
 		return nil, err
