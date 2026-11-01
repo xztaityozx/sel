@@ -107,6 +107,7 @@ func TestGetOptionNames(t *testing.T) {
 			option.NameCsv,
 			option.NameTsv,
 			option.NameTemplate,
+			option.NameExclude,
 		}},
 	}
 	for _, tt := range tests {
