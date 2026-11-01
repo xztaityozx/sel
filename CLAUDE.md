@@ -25,7 +25,7 @@ golangci-lint run                   # Lint (make ci-lint runs it via mise)
    - Index queries: `1`, `-1`
    - Range queries: `1:10`, `1:10:2`, `-4:`
    - Switch queries (sed/awk 2addr style): `/regexp/:/regexp/`, `1:/end/`, `/start/:+3`
-   - A range whose start/stop have the same sign and whose direction contradicts its step is rejected here
+   - A range whose start/stop have the same sign (or `-k:0` with a positive step) and whose direction contradicts its step is rejected here
 
 2. **Selectors** (`internal/column/`) - Three types implementing `Selector`:
    - `IndexSelector` - Single column by index
