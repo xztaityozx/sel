@@ -66,6 +66,8 @@ golangci-lint run
 - **CSV/TSV mode**: Uses `encoding/csv` for proper quote handling
 
 ### Command Flags (defined in `cmd/root.go`)
+`Execute()` runs `os.Args` through `normalizeArgs` (`cmd/args.go`) first, which reorders it into `flags... -- queries...`: a token whose `-` is followed by a digit is always a query (no shorthand is a digit), so negative indices need no `--`. `--` itself is dropped and sorting continues past it
+
 - `-d`/`-D`: Input/output delimiters
 - `-g`: Use regexp for input delimiter
 - `-a`: Shorthand for `-gd '\s+'`
@@ -74,3 +76,6 @@ golangci-lint run
 - `--csv`/`--tsv`: CSV/TSV parsing mode
 - `-t`: Template output with `{}` placeholders (`{{`/`}}` escape a literal brace)
 - `-x`/`--exclude`: Drop columns (index or range query) before the queries run; the remaining columns are renumbered from 1, and with no query at all every remaining column is printed
+
+## Git
+- Do not include a `Claude-Session:` line (or any claude.ai session URL) in commit messages or pull request bodies
