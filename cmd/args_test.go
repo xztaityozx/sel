@@ -36,7 +36,9 @@ func Test_normalizeArgs(t *testing.T) {
 		{name: "flags after queries", args: []string{"-1", "-f", "./file", "2"}, expected: []string{"-f", "./file", "--", "-1", "2"}},
 		{name: "flags after double dash", args: []string{"--", "-1", "-f", "./file"}, expected: []string{"-f", "./file", "--", "-1"}},
 		{name: "double dash in the middle", args: []string{"-d,", "1", "2", "--", "-1", "-2"}, expected: []string{"-d,", "--", "1", "2", "-1", "-2"}},
-		{name: "value flag at the end", args: []string{"-1", "-d"}, expected: []string{"-d", "--", "-1"}},
+		{name: "value flag at the end drops queries", args: []string{"-1", "-d"}, expected: []string{"-d"}},
+		{name: "long value flag at the end drops queries", args: []string{"1", "--template"}, expected: []string{"--template"}},
+		{name: "bool shorthand with joined value", args: []string{"-r=f", "-1"}, expected: []string{"-r=f", "--", "-1"}},
 		{name: "help flag", args: []string{"--help"}, expected: []string{"--help"}},
 		{name: "help shorthand", args: []string{"-h"}, expected: []string{"-h"}},
 		{name: "version flag", args: []string{"--version"}, expected: []string{"--version"}},
@@ -45,7 +47,9 @@ func Test_normalizeArgs(t *testing.T) {
 		{name: "template value that looks like a flag", args: []string{"-t", "-{}-", "-1"}, expected: []string{"-t", "-{}-", "--", "-1"}},
 		{name: "completion subcommand is left as is", args: []string{"completion", "bash"}, expected: []string{"completion", "bash"}},
 		{name: "help subcommand is left as is", args: []string{"help", "completion"}, expected: []string{"help", "completion"}},
-		{name: "shell completion request is left as is", args: []string{"__complete", "-d", ""}, expected: []string{"__complete", "-d", ""}},
+		{name: "shell completion keeps flags and the last token", args: []string{"__complete", "-1", "-f", ""}, expected: []string{"__complete", "-f", ""}},
+		{name: "shell completion of a flag name", args: []string{"__complete", "-1", "--i"}, expected: []string{"__complete", "--i"}},
+		{name: "shell completion of a subcommand is left as is", args: []string{"__complete", "completion", ""}, expected: []string{"__complete", "completion", ""}},
 	}
 
 	for _, tc := range testcases {

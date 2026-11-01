@@ -20,49 +20,62 @@ import (
 //     sel -- -1 -f ./file のように "--" の後ろに書いたフラグもフラグとして扱える
 //   - それ以外はクエリ
 //
-// 先頭がサブコマンド（completion や cobra が補完に使う __complete など）のときは、仕分けずにそのまま返す
+// 先頭がサブコマンド（completion など）のときは、仕分けずにそのまま返す。
+// シェル補完（__complete）では、補完中の最後のトークンだけを残し、それより前はフラグだけを渡す。sel のクエリに補完候補はない
 func normalizeArgs(cmd *cobra.Command, args []string) []string {
+	if len(args) >= 2 && (args[0] == cobra.ShellCompRequestCmd || args[0] == cobra.ShellCompNoDescRequestCmd) && !isSubCommand(cmd, args[1]) {
+		flags, _ := sortArgs(cmd.Flags(), args[1:len(args)-1])
+		return slices.Concat(args[:1], flags, args[len(args)-1:])
+	}
 	if len(args) == 0 || isSubCommand(cmd, args[0]) {
 		return args
 	}
 
-	fs := cmd.Flags()
-	flags := make([]string, 0, len(args))
-	queries := make([]string, 0, len(args))
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--":
-			continue
-		case len(arg) < 2 || arg[0] != '-' || isDigit(arg[1]):
-			queries = append(queries, arg)
-		case strings.HasPrefix(arg, "--"):
-			flags = append(flags, arg)
-			name, _, hasValue := strings.Cut(arg[2:], "=")
-			if !hasValue && takesValue(fs.Lookup(name)) && i+1 < len(args) {
-				i++
-				flags = append(flags, args[i])
-			}
-		default:
-			flags = append(flags, arg)
-			if shorthandsTakeNextArg(fs, arg[1:]) && i+1 < len(args) {
-				i++
-				flags = append(flags, args[i])
-			}
-		}
-	}
-
+	flags, queries := sortArgs(cmd.Flags(), args)
 	if len(queries) == 0 {
 		return flags
 	}
 	return slices.Concat(flags, []string{"--"}, queries)
 }
 
+// sortArgs は args をフラグとクエリに仕分ける。
+// 値を取るフラグが末尾にあって値がないときは、pflag に "flag needs an argument" を出させるためにクエリを捨てる
+func sortArgs(fs *pflag.FlagSet, args []string) (flags, queries []string) {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		var takesNext bool
+		switch {
+		case arg == "--":
+			continue
+		case len(arg) < 2 || arg[0] != '-' || isDigit(arg[1]):
+			queries = append(queries, arg)
+			continue
+		case strings.HasPrefix(arg, "--"):
+			name, _, hasValue := strings.Cut(arg[2:], "=")
+			takesNext = !hasValue && takesValue(fs.Lookup(name))
+		default:
+			takesNext = shorthandsTakeNextArg(fs, arg[1:])
+		}
+		flags = append(flags, arg)
+		if takesNext {
+			if i+1 == len(args) {
+				return flags, nil
+			}
+			i++
+			flags = append(flags, args[i])
+		}
+	}
+	return flags, queries
+}
+
 // shorthandsTakeNextArg は -rd のような shorthand の束が、次のトークンを値として消費するかを返す。
 // 値を取るフラグが束の末尾にあるときだけ消費する（-d, や -rd, のように値が結合されていれば消費しない）
 func shorthandsTakeNextArg(fs *pflag.FlagSet, shorthands string) bool {
 	for i := range len(shorthands) {
+		if shorthands[i] == '=' {
+			// -r=f のように = 以降は値なので、shorthand として見ない
+			return false
+		}
 		flag := fs.ShorthandLookup(shorthands[i : i+1])
 		if flag == nil {
 			// 未知の shorthand（と、cobra が Execute 時に足す -h / -v）は値を取らないものとみなす。
