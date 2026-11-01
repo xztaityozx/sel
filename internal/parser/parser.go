@@ -91,10 +91,10 @@ func parseRangeQuery(query Query, m []string) (column.Selector, error) {
 		return nil, fmt.Errorf("step cannot be zero in query %q", query)
 	}
 
-	// start と stop が両方とも負でなければ、範囲の向きは行のカラム数に関係なく決まる。
-	// step の向きと食い違っているクエリはどの行でも成立しないので、毎行エラーにせずここで断る
-	// (負の指定は行のカラム数で解決するまで向きが決まらないので、Select / markExcluded に任せる)
-	if !isInfStop && start >= 0 && stop >= 0 {
+	// start と stop の符号が揃っていれば、範囲の向きは行のカラム数に関係なく決まる。
+	// step の向きと食い違っているクエリはどの行でも何も選べないので、ここで断る
+	// (符号が混ざった指定は行ごとに向きが決まり、食い違った行では何も選ばない)
+	if !isInfStop && (start >= 0) == (stop >= 0) {
 		if start < stop && step < 0 {
 			return nil, fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d) in query %q", start, step, stop, query)
 		}

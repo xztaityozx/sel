@@ -82,8 +82,6 @@ func TestRangeSelector_Select(t *testing.T) {
 			step  int
 			stop  int
 		}{
-			{start: 0, step: -1, stop: 5},
-			{start: 5, step: 1, stop: 0},
 			{start: 1000, step: 1, stop: 1000},
 		}
 
@@ -212,6 +210,14 @@ func TestRangeSelector_Select_OutOfRange(t *testing.T) {
 		{name: "2:", rs: NewRangeSelector(2, 1, 2, true), columns: []string{"a"}, want: ""},
 		{name: "0:0", rs: NewRangeSelector(0, 1, 0, false), columns: []string{"a", "b", "c"}, want: "a b c"},
 		{name: "1:3 (空行)", rs: NewRangeSelector(1, 1, 3, false), columns: nil, want: ""},
+		// 書かれたままの 0 を含む範囲は n+1 位置あるので、行幅より大きい step で末尾カラムを拾わない
+		{name: "0:5:100", rs: NewRangeSelector(0, 100, 5, false), columns: []string{"a", "b", "c"}, want: "a b c"},
+		{name: "3:0:-100", rs: NewRangeSelector(3, -100, 0, false), columns: []string{"a", "b", "c"}, want: "c"},
+		// 負の終端が start より手前に落ちた行は、向きのエラーではなく選べるカラムなし
+		{name: "2:-1 (1カラム)", rs: NewRangeSelector(2, 1, -1, false), columns: []string{"a"}, want: ""},
+		{name: "-1:1 (3カラム)", rs: NewRangeSelector(-1, 1, 1, false), columns: []string{"a", "b", "c"}, want: ""},
+		{name: "0::-1", rs: NewRangeSelector(0, -1, 0, true), columns: []string{"a", "b", "c"}, want: "a b c"},
+		{name: "1::-1 (空行)", rs: NewRangeSelector(1, -1, 1, true), columns: nil, want: ""},
 	}
 
 	for _, v := range dataset {

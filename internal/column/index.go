@@ -44,6 +44,7 @@ func (i IndexSelector) markExcluded(mark []bool) {
 	if idx < 0 {
 		idx = len(mark) + idx + 1
 	}
-
-	markColumn(mark, idx)
+	if idx >= 1 && idx <= len(mark) {
+		mark[idx-1] = true
+	}
 }

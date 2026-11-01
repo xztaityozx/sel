@@ -51,7 +51,10 @@ golangci-lint run
      - `RegexpIterator` - Regex-based splitting
      - `PreSplitIterator` - Pre-split all columns (for `-S` flag or CSV/TSV)
 
-4. **Exclusion** (`internal/column/exclude.go`) - Only when `-x` is given. `Exclusion.Apply` wraps the `Columns` of a line in a view that hides the excluded columns, so selectors see the remaining columns renumbered from 1. Index and range queries only (they implement `markExcluded`); switch queries and index `0` are rejected at parse time
+4. **Exclusion** (`internal/column/exclude.go`) - Only when `-x` is given
+   - `Exclusion.Apply` wraps the `Columns` of a line in a view that hides the excluded columns, so selectors see the remaining columns renumbered from 1
+   - Index and range queries only (they implement `markExcluded`); switch queries and index `0` are rejected at parse time
+   - `RangeSelector.Select` and `markExcluded` share `indices`, so `-x` and normal selection walk a range the same way
 
 5. **Output** (`internal/output/`) - `Writer` handles delimiter joining and template-based output
    - `option.Template` (`internal/option/template.go`) parses `-t` into literal fragments. It is NOT `text/template`: `{}` is a placeholder, `{{`/`}}` are literal braces, everything else is copied as-is

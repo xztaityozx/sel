@@ -115,15 +115,15 @@ func TestParse(t *testing.T) {
 }
 
 func TestParse_RangeDirection(t *testing.T) {
-	// start と stop が両方とも負でなければ、範囲の向きは行に関係なく決まる。
-	// step の向きと食い違うクエリはどの行でも成立しないのでパース時に断る
-	for _, q := range []string{"5:1", "1:0", "2:0", "1:5:-1", "10:12:-1"} {
+	// start と stop の符号が揃っていれば、範囲の向きは行に関係なく決まる。
+	// step の向きと食い違うクエリはどの行でも何も選べないのでパース時に断る
+	for _, q := range []string{"5:1", "1:0", "2:0", "1:5:-1", "10:12:-1", "-1:-3", "-3:-1:-1"} {
 		_, err := Parse([]string{q})
 		require.Error(t, err, "query: %q", q)
 	}
 
-	// 負の指定は行のカラム数で解決するまで向きが決まらないので、ここでは通す
-	for _, q := range []string{"-1:1:-1", "1:-5:-1", "-8:-1:2", "2:-8:-1", "5::-1", "2:2"} {
+	// 符号が混ざった指定は行のカラム数で解決するまで向きが決まらないので、ここでは通す
+	for _, q := range []string{"-1:1:-1", "1:-5:-1", "-8:-1:2", "2:-8:-1", "5::-1", "2:2", "-1:1", "2:-1"} {
 		_, err := Parse([]string{q})
 		assert.NoError(t, err, "query: %q", q)
 	}
@@ -149,7 +149,7 @@ func TestParseExclude(t *testing.T) {
 	})
 
 	t.Run("不正なクエリ", func(t *testing.T) {
-		for _, q := range []string{"a", "1:2:0"} {
+		for _, q := range []string{"a", "1:2:0", "-1:-3"} {
 			_, err := ParseExclude([]string{q})
 			assert.Error(t, err, "query: %q", q)
 		}
