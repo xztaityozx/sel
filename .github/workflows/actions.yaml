@@ -1,0 +1,21 @@
+name: Code Quality (GitHub Actions)
+
+on:
+  pull_request:
+    types: 
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - '.github/workflows/**.yaml'
+      - '.github/workflows/**.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: actionlint
+        uses: reviewdog/action-actionlint@v1.80.1
+
+
