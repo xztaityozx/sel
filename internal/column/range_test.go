@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/option"
 	"github.com/xztaityozx/sel/internal/output"
 )
@@ -208,14 +207,15 @@ func TestRangeSelector_Select_OutOfRange(t *testing.T) {
 		{name: "2:-8:-1", rs: NewRangeSelector(2, -1, -8, false), columns: []string{"a", "b", "c"}, want: "b a"},
 		{name: "10:12", rs: NewRangeSelector(10, 1, 12, false), columns: []string{"a", "b", "c"}, want: ""},
 		{name: "2:", rs: NewRangeSelector(2, 1, 2, true), columns: []string{"a"}, want: ""},
+		{name: "1: (空行)", rs: NewRangeSelector(1, 1, 1, true), columns: nil, want: ""},
 		{name: "0:0", rs: NewRangeSelector(0, 1, 0, false), columns: []string{"a", "b", "c"}, want: "a b c"},
 		{name: "1:3 (空行)", rs: NewRangeSelector(1, 1, 3, false), columns: nil, want: ""},
 		// 書かれたままの 0 を含む範囲は n+1 位置あるので、行幅より大きい step で末尾カラムを拾わない
 		{name: "0:5:100", rs: NewRangeSelector(0, 100, 5, false), columns: []string{"a", "b", "c"}, want: "a b c"},
 		{name: "3:0:-100", rs: NewRangeSelector(3, -100, 0, false), columns: []string{"a", "b", "c"}, want: "c"},
-		// 負の終端が start より手前に落ちた行は、向きのエラーではなく選べるカラムなし
-		{name: "2:-1 (1カラム)", rs: NewRangeSelector(2, 1, -1, false), columns: []string{"a"}, want: ""},
-		{name: "-1:1 (3カラム)", rs: NewRangeSelector(-1, 1, 1, false), columns: []string{"a", "b", "c"}, want: ""},
+		// 負の指定を解決した結果 step と向きが食い違った行はエラー
+		{name: "2:-1 (1カラム)", rs: NewRangeSelector(2, 1, -1, false), columns: []string{"a"}, wantErr: true},
+		{name: "-1:1 (3カラム)", rs: NewRangeSelector(-1, 1, 1, false), columns: []string{"a", "b", "c"}, wantErr: true},
 		{name: "0::-1", rs: NewRangeSelector(0, -1, 0, true), columns: []string{"a", "b", "c"}, want: "a b c"},
 		{name: "1::-1 (空行)", rs: NewRangeSelector(1, -1, 1, true), columns: nil, want: ""},
 	}
@@ -226,7 +226,7 @@ func TestRangeSelector_Select_OutOfRange(t *testing.T) {
 			writer := output.NewWriter(option.Option{DelimiterOption: option.DelimiterOption{OutPutDelimiter: " "}}, &buf, true)
 			err := v.rs.Select(writer, &testColumns{a: v.columns})
 			if v.wantErr {
-				assert.ErrorIs(t, err, iterator.ErrIndexOutOfRange)
+				assert.Error(t, err)
 				return
 			}
 			require.NoError(t, err)

@@ -93,7 +93,7 @@ func parseRangeQuery(query Query, m []string) (column.Selector, error) {
 
 	// start と stop の符号が揃っていれば、範囲の向きは行のカラム数に関係なく決まる。
 	// step の向きと食い違っているクエリはどの行でも何も選べないので、ここで断る
-	// (符号が混ざった指定は行ごとに向きが決まり、食い違った行では何も選ばない)
+	// (符号が混ざった指定は行ごとに向きが決まり、食い違った行はエラー。-M/-E で抑制できる)
 	// 書かれたままの stop 0 は行全体で、どのカラムより手前にあるので、前向きなら start が負でも何も選べない
 	if !isInfStop && stop == 0 && start < 0 && step > 0 {
 		return nil, fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d) in query %q", start, step, stop, query)

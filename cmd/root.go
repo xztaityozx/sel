@@ -284,7 +284,7 @@ func selectAll(columns iterator.Columns, w *output.Writer, selectors []column.Se
 
 		err := selector.Select(w, columns)
 		if err != nil {
-			if filler.enabled && iterator.IsIndexOutOfRange(err) {
+			if filler.enabled && (iterator.IsIndexOutOfRange(err) || errors.Is(err, column.ErrRangeDirection)) {
 				if werr := w.WriteMissing(filler.fill); werr != nil {
 					return &selectError{query: query, err: werr}
 				}

@@ -31,7 +31,7 @@ golangci-lint run                   # Lint (make ci-lint runs it via mise)
    - `IndexSelector` - Single column by index
    - `RangeSelector` - Range with optional step (Python slice notation). `Select` and `markExcluded` walk the range via the shared `indices`
      - Only columns that exist in the line are written; only a single-index range (`4:4`) out of range is an error
-     - If resolving negative bounds against the line's column count makes the direction contradict the step, that line selects nothing
+     - If resolving negative bounds against the line's column count makes the direction contradict the step, that line is an error (`ErrRangeDirection`, suppressed by `-M`/`-E`)
    - `SwitchSelector` - Regex-based range selection with +N/-N context support
 
 3. **Iterators** (`internal/iterator/`) - Split into two interfaces:

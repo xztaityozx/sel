@@ -1186,6 +1186,18 @@ func Test_E2E(t *testing.T) {
 			expectedStderr: []string{""},
 			expectedError:  nil,
 		},
+		{
+			// 行のカラム数で解決した向きが step と食い違う行はエラー
+			name:            "sel -1:1 fails when the direction contradicts the step",
+			input:           input{args: []string{"--", "-1:1"}, stdin: []string{"a b c"}},
+			expectExitError: true,
+		},
+		{
+			name:           "sel -E X -1:1 fills instead of failing",
+			input:          input{args: []string{"-E", "X", "-t", "[{}]", "--", "-1:1"}, stdin: []string{"a b c"}},
+			expectedStdout: []string{"[X]"},
+			expectedStderr: []string{""},
+		},
 	}
 
 	for _, testcase := range testcases {

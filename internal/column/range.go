@@ -1,11 +1,15 @@
 package column
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/output"
 )
+
+// ErrRangeDirection は行のカラム数で解決した範囲の向きが step と食い違ったときのエラー。-M/-E で抑制できる
+var ErrRangeDirection = errors.New("range direction contradicts step")
 
 // RangeSelector はカラムの範囲選択するやつ
 type RangeSelector struct {
@@ -32,7 +36,7 @@ func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 }
 
 // markExcluded は -x でこの範囲が指すカラムに印をつける。index 0 は NewExclusion が弾いている。
-// 単一の index として書いた範囲(4:4 など)が行の外を指すエラーは、-x では除外する列がないだけなので捨てる
+// 行の外を指すエラーや向きの食い違いは、-x では除外する列がないだけなので捨てる
 func (r RangeSelector) markExcluded(mark []bool) {
 	_ = r.indices(len(mark), func(i int) error {
 		mark[i-1] = true
@@ -42,7 +46,7 @@ func (r RangeSelector) markExcluded(mark []bool) {
 
 // indices は n カラムの行でこの範囲が指す添字を順に fn に渡す。渡すのは 1..n と、書かれたままの 0 (行全体) だけ。
 // 行の外に出た添字は飛ばし、エラーにするのは単一の index として書いた範囲(4:4 など)が行の外を指すときだけ。
-// 解決後の範囲と step の向きが食い違うのは負の指定が行のカラム数で解決された結果なので、その行で選べるカラムなしとする
+// 解決後の範囲と step の向きが食い違う行は ErrRangeDirection を返す。開いた終端の範囲は食い違わない
 // (どの行でも食い違うクエリは parser が弾いている)
 func (r RangeSelector) indices(n int, fn func(i int) error) error {
 	start, stop := r.resolve(n)
@@ -55,8 +59,15 @@ func (r RangeSelector) indices(n int, fn func(i int) error) error {
 		}
 		step = 1
 	}
-	if (start < stop && step < 0) || (start > stop && step > 0) {
+	// 開いた終端(5: など)は step の向きにある行の端なので、行の外から始まっても食い違いではなく空
+	if r.isInfStop && ((start < stop && step < 0) || (start > stop && step > 0)) {
 		return nil
+	}
+	if start < stop && step < 0 {
+		return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d): %w", start, step, stop, ErrRangeDirection)
+	}
+	if start > stop && step > 0 {
+		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d): %w", start, step, stop, ErrRangeDirection)
 	}
 
 	// 行内([1, n])に詰めてから回す。詰めないと 2:100000000000 のような指定が行ごとに巨大なループになる。
