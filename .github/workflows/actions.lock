@@ -9,7 +9,7 @@ workflows:
     '.github/workflows/benchmark.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-go@v7.0.0'
-        - 'jdx/mise-action@v5.1.2'
+        - 'jdx/mise-action@v5.2.1'
     '.github/workflows/go.yml':
         - 'actions/cache@v6.1.0'
         - 'actions/checkout@v7.0.1'
@@ -44,9 +44,9 @@ dependencies:
         commit: 'sha1-a4f02ab5355a589de60d917a659ce617ed19b3de'
         owner_id: 24697112
         repo_id: 209873006
-    'jdx/mise-action@v5.1.2':
-        ref: 'v5.1.2'
-        commit: 'sha1-08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8'
+    'jdx/mise-action@v5.2.1':
+        ref: 'v5.2.1'
+        commit: 'sha1-fc42bcc7ddbf51124c30f95a877a0c5168a3bfde'
         owner_id: 216188
         repo_id: 738284564
     'reviewdog/action-actionlint@v1.80.1':
