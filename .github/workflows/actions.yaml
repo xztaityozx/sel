@@ -16,6 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: actionlint
-        uses: reviewdog/action-actionlint@v1.80.1
+        uses: reviewdog/action-actionlint@v1.80.8
 
 
