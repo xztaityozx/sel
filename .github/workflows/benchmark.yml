@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-go@v7.0.0
         with:
           go-version: ^1.26
-      - uses: jdx/mise-action@v5.1.2
+      - uses: jdx/mise-action@v5.2.4
 
       # 比較の公平さのため、head も base も同じコマンドでビルドする (Makefile は使わない)
       - name: Build head
