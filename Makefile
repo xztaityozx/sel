@@ -2,6 +2,11 @@
 DIST_DIR := dist
 EXECUTABLE_FILE := $(DIST_DIR)/sel
 
+# ビルドキャッシュをリポジトリ内に置く。HOME 以下に書けない環境 (サンドボックスなど)
+# でも go build / go test が通るようにするため。外から GOCACHE を渡せば従来どおり
+GOCACHE ?= $(CURDIR)/.gocache
+export GOCACHE
+
 # clean と build/test は同じ dist/ を触るので、並列実行されると rm -r dist が
 # go build と競合する。この Makefile は並列化しても得るものがない
 # (go build も go test も内部で並列化する) ので、全体を直列に倒しておく。

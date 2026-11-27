@@ -1,11 +1,15 @@
 package column
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/xztaityozx/sel/internal/iterator"
 	"github.com/xztaityozx/sel/internal/output"
 )
+
+// ErrRangeDirection は行のカラム数で解決した範囲の向きが step と食い違ったときのエラー。-M/-E で抑制できる
+var ErrRangeDirection = errors.New("range direction contradicts step")
 
 // RangeSelector はカラムの範囲選択するやつ
 type RangeSelector struct {
@@ -21,81 +25,123 @@ func NewRangeSelector(start, step, stop int, isInfStop bool) RangeSelector {
 
 func (r RangeSelector) Select(w *output.Writer, iter iterator.Columns) error {
 	columns := iter.ToArray()
-	m := len(columns)
-
-	start, stop, step := r.normalizeRange(m)
-
-	if start == stop {
-		if start > m || start < 1 {
-			return fmt.Errorf("index %d: %w", start, iterator.ErrIndexOutOfRange)
+	return r.indices(len(columns), func(i int) error {
+		if i == 0 {
+			// index 0 (行全体)。空行では columns が0個になりうるが、
+			// $0 は「カラムが0個」ではなく「空文字列のカラムが1個」として書く(WriteLine 参照)
+			return w.WriteLine(columns)
 		}
-		return w.Write(columns[start-1])
-	}
-
-	if start < stop {
-		if step < 0 {
-			return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d)", start, step, stop)
-		}
-		return r.selectForward(w, columns, start, stop, step)
-	}
-
-	// start > stop
-	if step > 0 {
-		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d)", start, step, stop)
-	}
-	return r.selectBackward(w, columns, start, stop, step)
+		return w.Write(columns[i-1])
+	})
 }
 
-// normalizeRange は範囲パラメータを正規化する
-func (r RangeSelector) normalizeRange(m int) (start, stop, step int) {
+// markExcluded は -x でこの範囲が指すカラムに印をつける。index 0 は NewExclusion が弾いている。
+// 行の外を指すエラーや向きの食い違いは、-x では除外する列がないだけなので捨てる
+func (r RangeSelector) markExcluded(mark []bool) {
+	_ = r.indices(len(mark), func(i int) error {
+		mark[i-1] = true
+		return nil
+	})
+}
+
+// indices は n カラムの行でこの範囲が指す添字を順に fn に渡す。渡すのは 1..n と、書かれたままの 0 (行全体) だけ。
+// 行の外に出た添字は飛ばし、エラーにするのは単一の index として書いた範囲(4:4 など)が行の外を指すときだけ。
+// 解決後の範囲と step の向きが食い違う行は ErrRangeDirection を返す。開いた終端の範囲は食い違わない
+// (どの行でも食い違うクエリは parser が弾いている)
+func (r RangeSelector) indices(n int, fn func(i int) error) error {
+	start, stop := r.resolve(n)
+	step := r.step
+
+	if start == stop {
+		// 1カラムだけを指す範囲は step の向きを問わない
+		if !r.isInfStop && !r.includesWholeLine() && (start < 1 || start > n) {
+			return fmt.Errorf("index %d: %w", start, iterator.ErrIndexOutOfRange)
+		}
+		step = 1
+	}
+	// 開いた終端(5: など)は step の向きにある行の端なので、行の外から始まっても食い違いではなく空
+	if r.isInfStop && ((start < stop && step < 0) || (start > stop && step > 0)) {
+		return nil
+	}
+	if start < stop && step < 0 {
+		return fmt.Errorf("step must be bigger than 0(start:step:stop=%d:%d:%d): %w", start, step, stop, ErrRangeDirection)
+	}
+	if start > stop && step > 0 {
+		return fmt.Errorf("step must be less than 0(start:step:stop=%d:%d:%d): %w", start, step, stop, ErrRangeDirection)
+	}
+
+	// 行内([1, n])に詰めてから回す。詰めないと 2:100000000000 のような指定が行ごとに巨大なループになる。
+	// 行の外から始まる側は step の刻みを保ったまま最初の行内カラムまで進める。書かれたままの 0 は行全体なので詰めない。
+	// i += step の前に終端を越えるかを見て、桁溢れで i が負に回り込み行内に戻ってくるのを防ぐ
+	if step > 0 {
+		if r.start != 0 && start < 1 {
+			start = 1 + ((start-1)%step+step)%step
+		}
+		stop = min(stop, n)
+		for i := start; i <= stop; i += step {
+			if err := fn(i); err != nil {
+				return err
+			}
+			if stop-i < step {
+				break
+			}
+		}
+		return nil
+	}
+
+	// -step は step == MinInt64 で桁溢れするので、step の符号のまま計算する
+	if start > n {
+		if m := (start - n) % step; m == 0 {
+			start = n
+		} else {
+			start = n + m + step
+		}
+	}
+	if (r.isInfStop || r.stop != 0) && stop < 1 {
+		stop = 1
+	}
+	for i := start; i >= stop; i += step {
+		if err := fn(i); err != nil {
+			return err
+		}
+		if stop-i > step {
+			break
+		}
+	}
+	return nil
+}
+
+// resolve は行のカラム数 n に対して start/stop を実際のカラム番号に解決する。
+// 行内へのクランプはここではしない。stop を n に詰めてしまうと、行より後ろを指す範囲指定
+// (3カラムの行に対する 10:12 など)の向きが逆転する。詰めるのは向きが決まったあと(indices)
+func (r RangeSelector) resolve(n int) (start, stop int) {
 	start = r.start
 	if start < 0 {
-		start = m + start + 1
+		start = n + start + 1
+	}
+
+	// 開いた終端は範囲の向きにある行の端。前向きなら行末、後ろ向き(5::-1 など)なら先頭カラム。
+	// 0::-1 は行全体から後ろ向きなので行全体だけ(Python の a[0::-1] と同じ)
+	if r.isInfStop {
+		if r.step < 0 {
+			if r.start == 0 {
+				return start, 0
+			}
+			return start, 1
+		}
+		return start, n
 	}
 
 	stop = r.stop
-	if r.isInfStop || stop >= m {
-		stop = m
-	}
 	if stop < 0 {
-		stop = m + stop + 1
+		stop = n + stop + 1
 	}
 
-	return start, stop, r.step
+	return start, stop
 }
 
-// selectForward は start < stop の場合の選択処理
-func (r RangeSelector) selectForward(w *output.Writer, columns [][]byte, start, stop, step int) error {
-	for i := start; i <= stop; i += step {
-		if i == 0 {
-			// i == 0 は index 0 (行全体) の指定。空行では columns が0個になりうるが、
-			// $0 は「カラムが0個」ではなく「空文字列のカラムが1個」として書く(WriteLine 参照)
-			if err := w.WriteLine(columns); err != nil {
-				return err
-			}
-		} else {
-			if err := w.Write(columns[i-1]); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// selectBackward は start > stop の場合の選択処理
-func (r RangeSelector) selectBackward(w *output.Writer, columns [][]byte, start, stop, step int) error {
-	for i := start; i >= stop; i += step {
-		if i == 0 {
-			// i == 0 は index 0 (行全体) の指定。空行では columns が0個になりうるが、
-			// $0 は「カラムが0個」ではなく「空文字列のカラムが1個」として書く(WriteLine 参照)
-			if err := w.WriteLine(columns); err != nil {
-				return err
-			}
-		} else {
-			if err := w.Write(columns[i-1]); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+// includesWholeLine はクエリが index 0 (行全体) を名指ししているかどうかを返す。
+// 負の値は行のカラム数で解決されるので、ここで見るのは書かれたままの 0 だけ
+func (r RangeSelector) includesWholeLine() bool {
+	return r.start == 0 || (!r.isInfStop && r.stop == 0)
 }

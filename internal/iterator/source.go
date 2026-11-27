@@ -123,7 +123,7 @@ func (c *csvSource) Next() (Columns, error) {
 		return nil, err
 	}
 
-	c.columns.resetFromArray(c.toFields(record))
+	c.columns.ResetFromArray(c.toFields(record))
 	return c.columns, nil
 }
 

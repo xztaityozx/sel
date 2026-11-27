@@ -36,15 +36,15 @@ func (p *PreSplitIterator) ToArray() [][]byte {
 
 func (p *PreSplitIterator) Reset(b []byte) {
 	if p.reg == nil {
-		p.resetFromArray(bytes.Split(b, p.sep))
+		p.ResetFromArray(bytes.Split(b, p.sep))
 	} else {
-		p.resetFromArray(splitByRegexp(p.reg, b))
+		p.ResetFromArray(splitByRegexp(p.reg, b))
 	}
 }
 
-// resetFromArray は分割済みの配列をそのままカラム列として受け取る。
+// ResetFromArray は分割済みの配列をそのままカラム列として受け取る。
 // encoding/csv のように分割済みのレコードが手に入る入力で使う
-func (p *PreSplitIterator) resetFromArray(a [][]byte) {
+func (p *PreSplitIterator) ResetFromArray(a [][]byte) {
 	if p.removeEmpty {
 		p.a = removeEmpty(a)
 	} else {
@@ -84,6 +84,12 @@ func splitByRegexp(reg *regexp.Regexp, b []byte) [][]byte {
 	}
 
 	return a
+}
+
+// NewArrayColumns は分割済みのカラム列を ResetFromArray で受け取って見せるだけの Columns を作る。
+// 行を自前で分割しないので sep も reg も持たない(Reset は呼ばれない)
+func NewArrayColumns() *PreSplitIterator {
+	return &PreSplitIterator{}
 }
 
 func NewPreSplitIterator(s, sep string, re bool) *PreSplitIterator {
